@@ -14,27 +14,19 @@ app.get("/", (req, res) => {
 });
 
 app.get("/webhook", (req, res) => {
-  console.log("GET /webhook called");
-  console.log("Query:", req.query);
-
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
 
   if (mode === "subscribe" && token === VERIFY_TOKEN) {
-    console.log("Webhook verified successfully");
     return res.status(200).send(challenge);
   }
 
-  console.log("Webhook verification failed");
   return res.sendStatus(403);
 });
 
 app.post("/webhook", async (req, res) => {
   try {
-    console.log("POST /webhook called");
-    console.log(JSON.stringify(req.body, null, 2));
-
     const message = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
     const from = message?.from;
     const msg = message?.text?.body;
@@ -65,7 +57,6 @@ ${msg}
     });
 
     const data = await aiResponse.json();
-
     const reply =
       data.output_text ||
       "שלום 🌷 כדי לתת מענה מדויק, מומלץ ליצור קשר ישירות עם המרפאה.";
