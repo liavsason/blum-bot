@@ -9,23 +9,32 @@ const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 const PHONE_ID = process.env.PHONE_ID;
 const VERIFY_TOKEN = "12345";
 
-// אימות webhook מול Meta
+app.get("/", (req, res) => {
+  res.status(200).send("Server is running");
+});
+
 app.get("/webhook", (req, res) => {
+  console.log("GET /webhook called");
+  console.log("Query:", req.query);
+
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
 
   if (mode === "subscribe" && token === VERIFY_TOKEN) {
-    console.log("Webhook verified");
+    console.log("Webhook verified successfully");
     return res.status(200).send(challenge);
   }
 
+  console.log("Webhook verification failed");
   return res.sendStatus(403);
 });
 
-// קבלת הודעות מ-WhatsApp
 app.post("/webhook", async (req, res) => {
   try {
+    console.log("POST /webhook called");
+    console.log(JSON.stringify(req.body, null, 2));
+
     const message = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
     const from = message?.from;
     const msg = message?.text?.body;
@@ -44,15 +53,10 @@ app.post("/webhook", async (req, res) => {
         model: "gpt-4.1-mini",
         input: `
 אתה העוזר הדיגיטלי של מרפאת בלום.
-
-חוקים:
-- ענה בעברית בלבד.
-- ענה קצר, ברור, נעים ומקצועי.
-- אל תיתן אבחנה רפואית.
-- אל תיתן המלצה לטיפול אישי.
-- אל תיתן מחיר סופי.
-- אם השאלה רפואית אישית, הפנה לבדיקה במרפאה.
-- אם מבקשים נציג, כתוב שנציג מהמרפאה יחזור בהקדם.
+ענה בעברית, קצר, נעים ומקצועי.
+אל תיתן אבחנה רפואית, אל תיתן טיפול אישי, ואל תיתן מחיר סופי.
+אם זו שאלה רפואית אישית, הפנה לבדיקה במרפאה.
+אם מבקשים נציג, כתוב שנציג מהמרפאה יחזור בהקדם.
 
 שאלת המשתמש:
 ${msg}
@@ -61,9 +65,9 @@ ${msg}
     });
 
     const data = await aiResponse.json();
+
     const reply =
       data.output_text ||
-      data.output?.[0]?.content?.[0]?.text ||
       "שלום 🌷 כדי לתת מענה מדויק, מומלץ ליצור קשר ישירות עם המרפאה.";
 
     await fetch(`https://graph.facebook.com/v23.0/${PHONE_ID}/messages`, {
@@ -81,12 +85,12 @@ ${msg}
 
     return res.sendStatus(200);
   } catch (error) {
-    console.error("Webhook error:", error);
+    console.error("POST /webhook error:", error);
     return res.sendStatus(500);
   }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${PORT}`);
 });
