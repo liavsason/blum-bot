@@ -1,100 +1,100 @@
-import express from "express";
+require("dotenv").config();
+
+const express = require("express");
+const axios = require("axios");
+const OpenAI = require("openai");
 
 const app = express();
+
 app.use(express.json());
 
-const OPENAI_KEY = process.env.OPENAI_KEY;
-const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
-const PHONE_ID = process.env.PHONE_ID;
-const VERIFY_TOKEN = "12345";
-
-app.get("/", (req, res) => {
-  res.send("OK");
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
+// VERIFY WEBHOOK
 app.get("/webhook", (req, res) => {
+  const verify_token = "blum_verify_token";
+
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
 
-  if (mode === "subscribe" && token === VERIFY_TOKEN) {
+  if (mode && token === verify_token) {
+    console.log("Webhook verified");
     return res.status(200).send(challenge);
   }
 
   return res.sendStatus(403);
 });
 
+// RECEIVE WHATSAPP MESSAGES
 app.post("/webhook", async (req, res) => {
   console.log("Webhook POST received");
   console.log(JSON.stringify(req.body, null, 2));
 
   try {
-    const message = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
-    const from = message?.from;
-    const text = message?.text?.body;
+    const message =
+      req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
 
-    console.log("from:", from);
-    console.log("text:", text);
-
-    if (!from || !text) {
+    if (!message || message.type !== "text") {
       console.log("No real text message found");
       return res.sendStatus(200);
     }
 
-    const aiRes = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${OPENAI_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4.1-mini",
-        input: `
-אתה העוזר הדיגיטלי של מרפאת בלום.
-ענה בעברית בלבד, קצר, טבעי, מקצועי ונעים.
-אל תקבע תורים.
-אל תיתן אבחנה רפואית או המלצה טיפולית אישית.
-אל תיתן מחיר סופי.
-אם שואלים על מחיר, כתוב שמחיר מדויק ניתן לאחר בדיקה או ייעוץ.
-אם זו שאלה רפואית אישית, הפנה לבדיקה במרפאה.
+    const from = message.from;
+    const text = message.text.body;
 
-שאלת המטופל:
-${text}
-        `,
-      }),
+    console.log("from:", from);
+    console.log("text:", text);
+
+    // SEND MESSAGE TO OPENAI
+    const openaiResponse = await openai.responses.create({
+      model: "gpt-4.1-mini",
+      input: text,
     });
-
-    const data = await aiRes.json();
-    console.log("OpenAI response:", JSON.stringify(data, null, 2));
 
     const reply =
-      data.output_text ||
-      "שלום 🌷 כדי לתת מענה מדויק, מומלץ ליצור קשר ישירות עם מרפאת בלום.";
+      openaiResponse.output[0].content[0].text;
 
-    const waRes = await fetch(`https://graph.facebook.com/v25.0/${PHONE_ID}/messages`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${WHATSAPP_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    console.log("AI reply:", reply);
+
+    // SEND RESPONSE TO WHATSAPP
+    const whatsappResponse = await axios.post(
+      `https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`,
+      {
         messaging_product: "whatsapp",
         to: from,
-        text: { body: reply },
-      }),
-    });
+        text: {
+          body: reply,
+        },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
-    const waData = await waRes.json();
-    console.log("WhatsApp send response:", JSON.stringify(waData, null, 2));
+    console.log(
+      "WhatsApp send response:",
+      whatsappResponse.data
+    );
 
     return res.sendStatus(200);
-  } catch (err) {
-    console.error("ERROR:", err);
-    return res.sendStatus(200);
+  } catch (error) {
+    console.error(
+      "Error:",
+      error.response?.data || error.message
+    );
+
+    return res.sendStatus(500);
   }
 });
 
 const PORT = process.env.PORT || 10000;
+
 app.listen(PORT, () => {
   console.log(`Server listening on ${PORT}`);
 });
