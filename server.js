@@ -25,14 +25,19 @@ app.get("/webhook", (req, res) => {
 });
 
 app.post("/webhook", async (req, res) => {
-  try {
-    console.log("Webhook POST received");
+  console.log("Webhook POST received");
+  console.log(JSON.stringify(req.body, null, 2));
 
+  try {
     const message = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
     const from = message?.from;
     const text = message?.text?.body;
 
+    console.log("from:", from);
+    console.log("text:", text);
+
     if (!from || !text) {
+      console.log("No real text message found");
       return res.sendStatus(200);
     }
 
@@ -46,17 +51,12 @@ app.post("/webhook", async (req, res) => {
         model: "gpt-4.1-mini",
         input: `
 אתה העוזר הדיגיטלי של מרפאת בלום.
-
-ענה בעברית בלבד.
-ענה קצר, טבעי, מקצועי ונעים.
+ענה בעברית בלבד, קצר, טבעי, מקצועי ונעים.
 אל תקבע תורים.
-אל תיתן אבחנה רפואית.
-אל תיתן המלצה טיפולית אישית.
+אל תיתן אבחנה רפואית או המלצה טיפולית אישית.
 אל תיתן מחיר סופי.
-אם שואלים על מחיר, תגיד שמחיר מדויק ניתן לאחר בדיקה או ייעוץ.
-אם שואלים שאלה רפואית אישית, הפנה לבדיקה במרפאה.
-אם מבקשים נציג או מזכירה, תגיד שנציג מהמרפאה יחזור בהקדם.
-אם חסר מידע כמו שעות/כתובת/טלפון, תגיד בעדינות שכדאי ליצור קשר עם המרפאה.
+אם שואלים על מחיר, כתוב שמחיר מדויק ניתן לאחר בדיקה או ייעוץ.
+אם זו שאלה רפואית אישית, הפנה לבדיקה במרפאה.
 
 שאלת המטופל:
 ${text}
@@ -65,11 +65,13 @@ ${text}
     });
 
     const data = await aiRes.json();
+    console.log("OpenAI response:", JSON.stringify(data, null, 2));
+
     const reply =
       data.output_text ||
       "שלום 🌷 כדי לתת מענה מדויק, מומלץ ליצור קשר ישירות עם מרפאת בלום.";
 
-    await fetch(`https://graph.facebook.com/v25.0/${PHONE_ID}/messages`, {
+    const waRes = await fetch(`https://graph.facebook.com/v25.0/${PHONE_ID}/messages`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${WHATSAPP_TOKEN}`,
@@ -82,9 +84,12 @@ ${text}
       }),
     });
 
+    const waData = await waRes.json();
+    console.log("WhatsApp send response:", JSON.stringify(waData, null, 2));
+
     return res.sendStatus(200);
   } catch (err) {
-    console.error("Error:", err);
+    console.error("ERROR:", err);
     return res.sendStatus(200);
   }
 });
