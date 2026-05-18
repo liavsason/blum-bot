@@ -74,9 +74,10 @@ ${text}
     const aiData = await aiRes.json();
     console.log("OpenAI response:", JSON.stringify(aiData, null, 2));
 
-    const reply =
-      aiData.output_text ||
-      "שלום 🌷 כדי לתת מענה מדויק, מומלץ ליצור קשר ישירות עם מרפאת בלום.";
+const reply =
+  aiData.output?.[0]?.content?.[0]?.text ||
+  aiData.output_text ||
+  "שלום 🌷 כדי לתת מענה מדויק, מומלץ ליצור קשר ישירות עם מרפאת בלום.";
 
     const waRes = await fetch(`https://graph.facebook.com/v25.0/${PHONE_ID}/messages`, {
       method: "POST",
