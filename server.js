@@ -1,26 +1,23 @@
-require("dotenv").config();
-
-const express = require("express");
-const axios = require("axios");
-const OpenAI = require("openai");
+import express from "express";
 
 const app = express();
-
 app.use(express.json());
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+const OPENAI_KEY = process.env.OPENAI_KEY;
+const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
+const PHONE_ID = process.env.PHONE_ID;
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "12345";
+
+app.get("/", (req, res) => {
+  res.send("OK");
 });
 
-// VERIFY WEBHOOK
 app.get("/webhook", (req, res) => {
-  const verify_token = "blum_verify_token";
-
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
 
-  if (mode && token === verify_token) {
+  if (mode === "subscribe" && token === VERIFY_TOKEN) {
     console.log("Webhook verified");
     return res.status(200).send(challenge);
   }
@@ -28,14 +25,13 @@ app.get("/webhook", (req, res) => {
   return res.sendStatus(403);
 });
 
-// RECEIVE WHATSAPP MESSAGES
 app.post("/webhook", async (req, res) => {
   console.log("Webhook POST received");
   console.log(JSON.stringify(req.body, null, 2));
 
   try {
-    const message =
-      req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
+    const value = req.body.entry?.[0]?.changes?.[0]?.value;
+    const message = value?.messages?.[0];
 
     if (!message || message.type !== "text") {
       console.log("No real text message found");
@@ -43,53 +39,67 @@ app.post("/webhook", async (req, res) => {
     }
 
     const from = message.from;
-    const text = message.text.body;
+    const text = message.text?.body;
 
     console.log("from:", from);
     console.log("text:", text);
 
-    // SEND MESSAGE TO OPENAI
-    const openaiResponse = await openai.responses.create({
-      model: "gpt-4.1-mini",
-      input: text,
+    const aiRes = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${OPENAI_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4.1-mini",
+        input: `
+אתה העוזר הדיגיטלי של מרפאת בלום.
+
+ענה בעברית בלבד.
+ענה קצר, טבעי, מקצועי ונעים.
+אל תקבע תורים.
+אל תיתן אבחנה רפואית.
+אל תיתן המלצה רפואית אישית.
+אל תיתן מחיר סופי.
+אם שואלים על מחיר, תגיד שמחיר מדויק ניתן לאחר בדיקה או ייעוץ.
+אם שואלים שאלה רפואית אישית, הפנה לבדיקה במרפאה.
+אם מבקשים נציג או מזכירה, תגיד שנציג מהמרפאה יחזור בהקדם.
+
+שאלת המטופל:
+${text}
+        `,
+      }),
     });
 
+    const aiData = await aiRes.json();
+    console.log("OpenAI response:", JSON.stringify(aiData, null, 2));
+
     const reply =
-      openaiResponse.output[0].content[0].text;
+      aiData.output_text ||
+      "שלום 🌷 כדי לתת מענה מדויק, מומלץ ליצור קשר ישירות עם מרפאת בלום.";
 
-    console.log("AI reply:", reply);
-
-    // SEND RESPONSE TO WHATSAPP
-    const whatsappResponse = await axios.post(
-      `https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`,
-      {
+    const waRes = await fetch(`https://graph.facebook.com/v25.0/${PHONE_ID}/messages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${WHATSAPP_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
         messaging_product: "whatsapp",
         to: from,
         text: {
           body: reply,
         },
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+      }),
+    });
 
-    console.log(
-      "WhatsApp send response:",
-      whatsappResponse.data
-    );
+    const waData = await waRes.json();
+    console.log("WhatsApp send response:", JSON.stringify(waData, null, 2));
 
     return res.sendStatus(200);
   } catch (error) {
-    console.error(
-      "Error:",
-      error.response?.data || error.message
-    );
-
-    return res.sendStatus(500);
+    console.error("ERROR:", error);
+    return res.sendStatus(200);
   }
 });
 
