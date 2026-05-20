@@ -26,7 +26,7 @@ export async function saveLead(data) {
 
       spreadsheetId: SHEET_ID,
 
-      range: "Sheet1!A:J",
+      range: "גיליון1!A:J",
 
       valueInputOption: "USER_ENTERED",
 
