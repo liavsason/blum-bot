@@ -11,6 +11,7 @@ const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "12345";
 
 function isHumanRequest(text = "") {
   const t = text.toLowerCase();
+
   return (
     t.includes("נציג") ||
     t.includes("מזכירה") ||
@@ -20,6 +21,14 @@ function isHumanRequest(text = "") {
     t.includes("оператор") ||
     t.includes("администратор") ||
     t.includes("человек")
+  );
+}
+
+function hasPersonalDetails(text = "") {
+  return (
+    /05\d[-\s]?\d{7}|9725\d{8}/.test(text) ||
+    /\b\d{8,9}\b/.test(text) ||
+    /\d{1,2}[./-]\d{1,2}[./-]\d{2,4}/.test(text)
   );
 }
 
