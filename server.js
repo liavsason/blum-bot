@@ -23,14 +23,6 @@ function isHumanRequest(text = "") {
   );
 }
 
-function hasPersonalDetails(text = "") {
-  return (
-    /05\d[-\s]?\d{7}|9725\d{8}/.test(text) ||
-    /\b\d{8,9}\b/.test(text) ||
-    /\d{1,2}[./-]\d{1,2}[./-]\d{2,4}/.test(text)
-  );
-}
-
 function extractUserDetails(text = "") {
   const details = {};
 
@@ -44,18 +36,35 @@ function extractUserDetails(text = "") {
   if (dateMatch) details.birth_date = dateMatch[0];
 
   const namePatterns = [
-  /קוראים לי\s+([א-תa-zA-Zא-ת׳״'\- ]{2,30})(?=\s|$|,|\.|!|\?)/i,
-  /שמי\s+([א-תa-zA-Zא-ת׳״'\- ]{2,30})(?=\s|$|,|\.|!|\?)/i,
-  /השם שלי\s+([א-תa-zA-Zא-ת׳״'\- ]{2,30})(?=\s|$|,|\.|!|\?)/i,
-  /אני\s+([א-תa-zA-Zא-ת׳״'\- ]{2,20})(?=\s+(?:רוצה|מעוניין|מעוניינת|צריך|צריכה|מבקש|מבקשת|רציתי|אשמח)|$|,|\.|!|\?)/i,
-  /меня зовут\s+([а-яА-Яa-zA-ZёЁ\- ]{2,30})(?=\s|$|,|\.|!|\?)/i,
-];
+    /קוראים לי\s+([א-תa-zA-Z׳״'\- ]{2,30})(?=\s+(?:ואני|ורוצה|רוצה|מעוניין|מעוניינת|צריך|צריכה|מבקש|מבקשת)|$|,|\.|!|\?)/i,
+    /שמי\s+([א-תa-zA-Z׳״'\- ]{2,30})(?=\s+(?:ואני|ורוצה|רוצה|מעוניין|מעוניינת|צריך|צריכה|מבקש|מבקשת)|$|,|\.|!|\?)/i,
+    /השם שלי\s+([א-תa-zA-Z׳״'\- ]{2,30})(?=\s+(?:ואני|ורוצה|רוצה|מעוניין|מעוניינת|צריך|צריכה|מבקש|מבקשת)|$|,|\.|!|\?)/i,
+    /אני\s+([א-תa-zA-Z׳״'\- ]{2,20})(?=\s+(?:ואני|ורוצה|רוצה|מעוניין|מעוניינת|צריך|צריכה|מבקש|מבקשת)|$|,|\.|!|\?)/i,
+    /меня зовут\s+([а-яА-Яa-zA-ZёЁ\- ]{2,30})(?=\s|$|,|\.|!|\?)/i,
+  ];
+
+  const blockedNames = [
+    "רוצה",
+    "רוצה לקבוע",
+    "רוצה לקבוע תור",
+    "צריך",
+    "צריכה",
+    "מעוניין",
+    "מעוניינת",
+    "מבקש",
+    "מבקשת",
+  ];
 
   for (const pattern of namePatterns) {
     const match = text.match(pattern);
+
     if (match?.[1]) {
-      details.name = match[1].trim();
-      break;
+      const possibleName = match[1].trim();
+
+      if (!blockedNames.includes(possibleName)) {
+        details.name = possibleName;
+        break;
+      }
     }
   }
 
