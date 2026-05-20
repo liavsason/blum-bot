@@ -1,9 +1,7 @@
 import { google } from "googleapis";
 
-const credentials = JSON.parse(process.env.GOOGLE_SHEETS_CREDENTIALS);
-
 const auth = new google.auth.GoogleAuth({
-  credentials,
+  credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT),
   scopes: ["https://www.googleapis.com/auth/spreadsheets"],
 });
 
@@ -12,83 +10,92 @@ const sheets = google.sheets({
   auth,
 });
 
-const SHEET_ID = process.env.GOOGLE_SHEET_ID;
-const RANGE = "גיליון1!A:J";
+const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
+const SHEET_NAME = "Sheet1";
 
 export async function getLeadByPhone(phone) {
-  try {
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: SHEET_ID,
-      range: RANGE,
-    });
 
-    const rows = response.data.values || [];
-    const headers = rows[0];
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${SHEET_NAME}!A:J`,
+  });
 
-    for (let i = 1; i < rows.length; i++) {
-      const row = rows[i];
+  const rows = response.data.values || [];
 
-      if (row[0] === phone) {
-        return {
-          rowNumber: i + 1,
-          phone: row[0] || "",
-          name: row[1] || "",
-          birth_date: row[2] || "",
-          id_number: row[3] || "",
-          treatment: row[4] || "",
-          branch: row[5] || "",
-          status: row[6] || "",
-          human_takeover: row[7] || "false",
-          last_message: row[8] || "",
-          updated_at: row[9] || "",
-        };
-      }
+  for (let i = 1; i < rows.length; i++) {
+
+    if (rows[i][0] === phone) {
+
+      return {
+        rowIndex: i + 1,
+        phone: rows[i][0] || "",
+        name: rows[i][1] || "",
+        birth_date: rows[i][2] || "",
+        id_number: rows[i][3] || "",
+        treatment: rows[i][4] || "",
+        branch: rows[i][5] || "",
+        status: rows[i][6] || "",
+        human_takeover: rows[i][7] || "false",
+        last_message: rows[i][8] || "",
+        conversation_history: rows[i][9] || "",
+      };
     }
-
-    return null;
-  } catch (error) {
-    console.log("Google Sheets getLeadByPhone Error:", error.message);
-    return null;
   }
+
+  return null;
 }
 
 export async function upsertLead(data) {
-  try {
-    const existingLead = await getLeadByPhone(data.phone);
 
-    const values = [[
-      data.phone || "",
-      data.name || existingLead?.name || "",
-      data.birth_date || existingLead?.birth_date || "",
-      data.id_number || existingLead?.id_number || "",
-      data.treatment || existingLead?.treatment || "",
-      data.branch || existingLead?.branch || "",
-      data.status || existingLead?.status || "new",
-      data.human_takeover || existingLead?.human_takeover || "false",
-      data.last_message || existingLead?.last_message || "",
-      new Date().toISOString(),
-    ]];
+  const existing = await getLeadByPhone(data.phone);
 
-    if (existingLead) {
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: SHEET_ID,
-        range: `גיליון1!A${existingLead.rowNumber}:J${existingLead.rowNumber}`,
-        valueInputOption: "USER_ENTERED",
-        requestBody: { values },
-      });
+  if (existing) {
 
-      console.log("Lead updated in Google Sheets");
-    } else {
-      await sheets.spreadsheets.values.append({
-        spreadsheetId: SHEET_ID,
-        range: RANGE,
-        valueInputOption: "USER_ENTERED",
-        requestBody: { values },
-      });
+    const updatedHistory = `
+${existing.conversation_history || ""}
+USER: ${data.last_message || ""}
+`.trim();
 
-      console.log("Lead created in Google Sheets");
-    }
-  } catch (error) {
-    console.log("Google Sheets upsertLead Error:", error.message);
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${SHEET_NAME}!A${existing.rowIndex}:J${existing.rowIndex}`,
+      valueInputOption: "RAW",
+      requestBody: {
+        values: [[
+          data.phone || existing.phone,
+          data.name || existing.name,
+          data.birth_date || existing.birth_date,
+          data.id_number || existing.id_number,
+          data.treatment || existing.treatment,
+          data.branch || existing.branch,
+          data.status || existing.status,
+          data.human_takeover || existing.human_takeover,
+          data.last_message || existing.last_message,
+          updatedHistory
+        ]],
+      },
+    });
+
+    return;
   }
+
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${SHEET_NAME}!A:J`,
+    valueInputOption: "RAW",
+    requestBody: {
+      values: [[
+        data.phone || "",
+        data.name || "",
+        data.birth_date || "",
+        data.id_number || "",
+        data.treatment || "",
+        data.branch || "",
+        data.status || "",
+        data.human_takeover || "false",
+        data.last_message || "",
+        `USER: ${data.last_message || ""}`
+      ]],
+    },
+  });
 }
