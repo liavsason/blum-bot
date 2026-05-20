@@ -159,6 +159,12 @@ app.post("/webhook", async (req, res) => {
     const from = message.from;
     const text = message.text?.body;
 
+    await saveLead({
+  phone: from,
+  last_message: text,
+  status: "new"
+});
+
     const aiRes = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
