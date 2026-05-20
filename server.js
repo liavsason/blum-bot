@@ -159,10 +159,18 @@ app.post("/webhook", async (req, res) => {
     const from = message.from;
     const text = message.text?.body;
 
-    await saveLead({
+    const existingLead = await getLeadByPhone(from);
+
+if (existingLead?.human_takeover === "true") {
+  console.log("Human takeover active, bot will not reply");
+  return res.sendStatus(200);
+}
+
+await upsertLead({
   phone: from,
   last_message: text,
-  status: "new"
+  status: existingLead?.status || "new",
+  human_takeover: existingLead?.human_takeover || "false"
 });
 
     const aiRes = await fetch("https://api.openai.com/v1/responses", {
