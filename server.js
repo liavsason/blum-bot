@@ -157,21 +157,34 @@ app.post("/webhook", async (req, res) => {
     }
 
     const from = message.from;
-    const text = message.text?.body;
+    const text = message.text?.body || "";
 
     const existingLead = await getLeadByPhone(from);
 
-if (existingLead?.human_takeover === "true") {
-  console.log("Human takeover active, bot will not reply");
-  return res.sendStatus(200);
-}
+    let memoryContext = "";
 
-await upsertLead({
-  phone: from,
-  last_message: text,
-  status: existingLead?.status || "new",
-  human_takeover: existingLead?.human_takeover || "false"
-});
+    if (existingLead) {
+      memoryContext = `
+מידע קודם על המטופל:
+שם: ${existingLead.name || "לא נמסר"}
+טיפול קודם שהתעניין בו: ${existingLead.treatment || "לא ידוע"}
+סניף מועדף: ${existingLead.branch || "לא נמסר"}
+סטטוס שיחה: ${existingLead.status || "new"}
+הודעה אחרונה קודמת: ${existingLead.last_message || "אין"}
+`;
+    }
+
+    if (existingLead?.human_takeover === "true") {
+      console.log("Human takeover active, bot will not reply");
+      return res.sendStatus(200);
+    }
+
+    await upsertLead({
+      phone: from,
+      last_message: text,
+      status: existingLead?.status || "new",
+      human_takeover: existingLead?.human_takeover || "false",
+    });
 
     const aiRes = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
@@ -183,6 +196,13 @@ await upsertLead({
         model: "gpt-4.1-mini",
         input: `
 אתה העוזר הדיגיטלי של מרפאת בלום.
+
+${memoryContext}
+
+אם קיים מידע קודם על המטופל, תמשיך את השיחה לפי ההקשר הקודם.
+אל תשאל שוב שאלה שכבר קיבלת עליה תשובה.
+אם המטופל כבר דיבר על טיפול מסוים, תמשיך להתייחס לאותו טיפול.
+אם המטופל מבקש לקבוע תור אחרי שכבר שאל על טיפול מסוים, אל תשאל שוב "באיזה טיפול מדובר", אלא המשך לפי הטיפול הקודם.
 
 ענה לפי שפת המשתמש:
 אם המשתמש כותב בעברית — ענה בעברית.
