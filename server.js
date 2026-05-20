@@ -11,14 +11,12 @@ const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "12345";
 
 function isHumanRequest(text = "") {
   const t = text.toLowerCase();
-
   return (
     t.includes("נציג") ||
     t.includes("מזכירה") ||
     t.includes("בן אדם") ||
     t.includes("לדבר עם מישהו") ||
     t.includes("שיחזרו אליי") ||
-    t.includes("שיחזרו אלי") ||
     t.includes("оператор") ||
     t.includes("администратор") ||
     t.includes("человек")
@@ -26,80 +24,72 @@ function isHumanRequest(text = "") {
 }
 
 function hasPersonalDetails(text = "") {
-  const hasPhone = /05\d[-\s]?\d{7}|9725\d{8}/.test(text);
-  const hasId = /\b\d{8,9}\b/.test(text);
-  const hasDate = /\d{1,2}[./-]\d{1,2}[./-]\d{2,4}/.test(text);
+  return (
+    /05\d[-\s]?\d{7}|9725\d{8}/.test(text) ||
+    /\b\d{8,9}\b/.test(text) ||
+    /\d{1,2}[./-]\d{1,2}[./-]\d{2,4}/.test(text)
+  );
+}
 
-  return hasPhone || hasId || hasDate;
+function extractUserDetails(text = "") {
+  const details = {};
+
+  const phoneMatch = text.match(/05\d[-\s]?\d{7}|9725\d{8}/);
+  if (phoneMatch) details.phone_number = phoneMatch[0];
+
+  const idMatch = text.match(/\b\d{8,9}\b/);
+  if (idMatch) details.id_number = idMatch[0];
+
+  const dateMatch = text.match(/\d{1,2}[./-]\d{1,2}[./-]\d{2,4}/);
+  if (dateMatch) details.birth_date = dateMatch[0];
+
+  const namePatterns = [
+    /קוראים לי\s+([א-תa-zA-Z\s]{2,30})/i,
+    /שמי\s+([א-תa-zA-Z\s]{2,30})/i,
+    /אני\s+([א-תa-zA-Z\s]{2,30})/i,
+    /השם שלי\s+([א-תa-zA-Z\s]{2,30})/i,
+    /меня зовут\s+([а-яА-Яa-zA-Z\s]{2,30})/i,
+  ];
+
+  for (const pattern of namePatterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) {
+      details.name = match[1].trim();
+      break;
+    }
+  }
+
+  return details;
 }
 
 function detectTreatment(text = "", existingLead = null) {
   const t = text.toLowerCase();
 
   if (t.includes("שיננית") || t.includes("ניקוי")) {
-    return {
-      treatment: "שיננית",
-      status: "asked_about_hygienist",
-    };
+    return { treatment: "שיננית", status: "asked_about_hygienist" };
   }
 
   if (t.includes("הלבנה")) {
-    return {
-      treatment: "הלבנת שיניים",
-      status: "asked_about_whitening",
-    };
+    return { treatment: "הלבנת שיניים", status: "asked_about_whitening" };
   }
 
-  if (
-    t.includes("יישור") ||
-    t.includes("גשר") ||
-    t.includes("אורתודונט")
-  ) {
-    return {
-      treatment: "יישור שיניים",
-      status: "asked_about_ortho",
-    };
+  if (t.includes("יישור") || t.includes("גשר") || t.includes("אורתודונט")) {
+    return { treatment: "יישור שיניים", status: "asked_about_ortho" };
   }
 
-  if (
-    t.includes("אסתטיקה") ||
-    t.includes("בוטוקס") ||
-    t.includes("חומצה")
-  ) {
-    return {
-      treatment: "אסתטיקה",
-      status: "asked_about_aesthetic",
-    };
+  if (t.includes("אסתטיקה") || t.includes("בוטוקס") || t.includes("חומצה")) {
+    return { treatment: "אסתטיקה", status: "asked_about_aesthetic" };
   }
 
-  if (
-    t.includes("geneo") ||
-    t.includes("ג׳נאו") ||
-    t.includes("ג'נאו")
-  ) {
-    return {
-      treatment: "GeneO+",
-      status: "asked_about_geneo",
-    };
+  if (t.includes("geneo") || t.includes("ג׳נאו") || t.includes("ג'נאו")) {
+    return { treatment: "GeneO+", status: "asked_about_geneo" };
   }
 
-  if (
-    t.includes("רג׳ורן") ||
-    t.includes("רג'ורן") ||
-    t.includes("זרע סלמון")
-  ) {
-    return {
-      treatment: "רג׳ורן",
-      status: "asked_about_rejuran",
-    };
+  if (t.includes("רג׳ורן") || t.includes("רג'ורן") || t.includes("זרע סלמון")) {
+    return { treatment: "רג׳ורן", status: "asked_about_rejuran" };
   }
 
-  if (
-    t.includes("תור") ||
-    t.includes("לקבוע") ||
-    t.includes("ייעוץ") ||
-    t.includes("פגישה")
-  ) {
+  if (t.includes("תור") || t.includes("לקבוע") || t.includes("ייעוץ") || t.includes("פגישה")) {
     return {
       treatment: existingLead?.treatment || "",
       status: "wants_appointment",
@@ -114,12 +104,9 @@ function detectTreatment(text = "", existingLead = null) {
 
 const clinicKnowledge = `
 שם המרפאה: מרפאת בלום
-
 טלפון: 054-234-4742
 אימייל: mail@blumplus.com
-
-שפות:
-עברית ורוסית
+שפות: עברית ורוסית
 
 רופאים:
 ד״ר מייקל בלום – מומחה ליישור שיניים ואורתודונטיה
@@ -132,11 +119,10 @@ const clinicKnowledge = `
 כתובת:
 יהושוע רבינוביץ 58 חולון
 מרכז מסחרי דר גת קומה 1
+חניה תת קרקעית ללא עלות
 
 סניפים:
-חולון
-מודיעין
-כרמי יוסף
+חולון, כרמי יוסף
 
 שיננית:
 מבוגר מעל גיל 18 – 280 ₪
@@ -144,8 +130,7 @@ const clinicKnowledge = `
 חיילים בסדיר – 210 ₪
 
 ייעוץ אצל ד״ר מייקל בלום:
-250 ₪
-מתקזז מעלות הטיפול אם ממשיכים
+250 ₪, מתקזז מעלות הטיפול אם ממשיכים
 
 ייעוץ אסתטיקה אצל ד״ר מרינה בלום:
 ללא עלות
@@ -166,6 +151,7 @@ GeneO+:
 לא לאבחן רפואית
 לא להבטיח תוצאות
 לא לתת המלצה רפואית אישית
+אם יש מצב דחוף להפנות לטלפון המרפאה
 `;
 
 app.get("/", (req, res) => {
@@ -196,9 +182,7 @@ app.post("/webhook", async (req, res) => {
     const from = message.from;
     const text = message.text?.body || "";
 
-    // עצירת בוט
     if (text.trim() === "#עצור") {
-
       await upsertLead({
         phone: from,
         human_takeover: "true",
@@ -206,14 +190,10 @@ app.post("/webhook", async (req, res) => {
         last_message: text,
       });
 
-      console.log("Bot stopped for:", from);
-
       return res.sendStatus(200);
     }
 
-    // החזרת בוט
     if (text.trim() === "#בוט") {
-
       await upsertLead({
         phone: from,
         human_takeover: "false",
@@ -221,27 +201,25 @@ app.post("/webhook", async (req, res) => {
         last_message: text,
       });
 
-      console.log("Bot resumed for:", from);
-
       return res.sendStatus(200);
     }
 
     const existingLead = await getLeadByPhone(from);
 
-    // אם נציג אנושי השתלט
     if (existingLead?.human_takeover === "true") {
       console.log("Human takeover active");
-
       return res.sendStatus(200);
     }
 
     const detected = detectTreatment(text, existingLead);
+    const extractedDetails = extractUserDetails(text);
 
-    // בקשה לנציג
     if (isHumanRequest(text)) {
-
       await upsertLead({
         phone: from,
+        name: extractedDetails.name,
+        birth_date: extractedDetails.birth_date,
+        id_number: extractedDetails.id_number,
         treatment: detected.treatment,
         status: "waiting_for_human",
         human_takeover: "true",
@@ -256,16 +234,13 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // אם נשלחו פרטים לקביעת תור
-    if (
-      hasPersonalDetails(text) &&
-      existingLead?.status === "wants_appointment"
-    ) {
-
+    if (hasPersonalDetails(text) && existingLead?.status === "wants_appointment") {
       await upsertLead({
         phone: from,
-        treatment:
-          detected.treatment || existingLead?.treatment || "",
+        name: extractedDetails.name,
+        birth_date: extractedDetails.birth_date,
+        id_number: extractedDetails.id_number,
+        treatment: detected.treatment || existingLead?.treatment || "",
         status: "waiting_for_human",
         human_takeover: "true",
         last_message: text,
@@ -279,95 +254,55 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // שמירת זיכרון
     await upsertLead({
       phone: from,
+      name: extractedDetails.name,
+      birth_date: extractedDetails.birth_date,
+      id_number: extractedDetails.id_number,
       treatment: detected.treatment,
       status: detected.status,
-      human_takeover:
-        existingLead?.human_takeover || "false",
+      human_takeover: existingLead?.human_takeover || "false",
       last_message: text,
     });
 
     const memoryContext = `
 מידע קודם:
-
-טלפון:
-${from}
-
-טיפול שמור:
-${detected.treatment || existingLead?.treatment || "לא ידוע"}
-
-סטטוס:
-${detected.status || existingLead?.status || "new"}
-
-הודעה קודמת:
-${existingLead?.last_message || "אין"}
-
+שם: ${extractedDetails.name || existingLead?.name || "לא נמסר"}
+טלפון: ${from}
+טיפול שמור: ${detected.treatment || existingLead?.treatment || "לא ידוע"}
+סטטוס: ${detected.status || existingLead?.status || "new"}
+הודעה קודמת: ${existingLead?.last_message || "אין"}
+היסטוריית שיחה:
+${existingLead?.conversation_history || "אין"}
 הודעה נוכחית:
 ${text}
 `;
 
-    const aiRes = await fetch(
-      "https://api.openai.com/v1/responses",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${OPENAI_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "gpt-4.1-mini",
-          input: `
+    const aiRes = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${OPENAI_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4.1-mini",
+        input: `
 אתה העוזר הדיגיטלי של מרפאת בלום.
 
 ${memoryContext}
 
-הוראות חשובות:
-
-אם יש טיפול שמור בזיכרון:
-תמשיך את השיחה לפי אותו טיפול.
-אל תשאל שוב "באיזה טיפול מדובר".
-
-אם המטופל שואל:
-"על מה דיברנו?"
-או
-"אתה זוכר?"
-תענה לפי הזיכרון.
-
-אם מדובר בשיננית:
-אפשר להציע קביעת תור.
-
-אם המטופל רוצה לקבוע תור לשיננית:
-בקש:
-שם מלא
-ומספר טלפון.
-
-אם מדובר בייעוץ אורתודונטי:
-תגיד:
-ייעוץ אצל ד״ר מייקל בלום עולה 250 ₪
-ומתקזז מהטיפול.
-
-אם מדובר באסתטיקה:
-תגיד שהייעוץ ללא עלות
-ושאל איזה סניף נוח.
-
-אם המטופל מבקש נציג:
-תגיד שהפנייה מועברת למזכירות.
-
-ענה באותה שפה של המשתמש:
-עברית בעברית
-רוסית ברוסית
-
-סגנון:
-טבעי
-קצר
-אנושי
-מקצועי
-
-אל תכתוב:
-"מחלקה"
-
+הוראות:
+אם יש טיפול שמור, תמשיך לפי אותו טיפול.
+אל תשאל שוב שאלה שכבר קיבלת עליה תשובה.
+אם המשתמש אמר את השם שלו, השתמש בשם שלו.
+אם המשתמש שואל על מה דיברנו, תענה לפי הזיכרון.
+אם המשתמש רוצה לקבוע תור לשיננית, בקש שם מלא ומספר טלפון אם חסר.
+אם המשתמש רוצה נציג, תגיד שהפנייה מועברת לצוות.
+אם מדובר בייעוץ אורתודונטי, ציין שהייעוץ עולה 250 ₪ ומתקזז.
+אם מדובר באסתטיקה, ציין שהייעוץ ללא עלות ושאל איזה סניף נוח.
+ענה באותה שפה של המשתמש.
+סגנון טבעי, קצר, אנושי ומקצועי.
+אל תכתוב "מחלקה".
 אל תמציא מידע.
 
 מאגר מידע:
@@ -375,10 +310,9 @@ ${clinicKnowledge}
 
 הודעת המשתמש:
 ${text}
-          `,
-        }),
-      }
-    );
+        `,
+      }),
+    });
 
     const aiData = await aiRes.json();
 
@@ -390,16 +324,13 @@ ${text}
     await sendWhatsAppMessage(from, reply);
 
     return res.sendStatus(200);
-
   } catch (error) {
     console.error("ERROR:", error);
-
     return res.sendStatus(200);
   }
 });
 
 async function sendWhatsAppMessage(to, body) {
-
   const waRes = await fetch(
     `https://graph.facebook.com/v25.0/${PHONE_ID}/messages`,
     {
@@ -411,19 +342,13 @@ async function sendWhatsAppMessage(to, body) {
       body: JSON.stringify({
         messaging_product: "whatsapp",
         to,
-        text: {
-          body,
-        },
+        text: { body },
       }),
     }
   );
 
   const waData = await waRes.json();
-
-  console.log(
-    "WhatsApp send response:",
-    JSON.stringify(waData, null, 2)
-  );
+  console.log("WhatsApp send response:", JSON.stringify(waData, null, 2));
 }
 
 const PORT = process.env.PORT || 10000;
