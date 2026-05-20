@@ -11,13 +11,13 @@ const sheets = google.sheets({
 });
 
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
-const SHEET_NAME = "Sheet1";
+const SHEET_NAME = "גיליון1";
 
 export async function getLeadByPhone(phone) {
 
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAME}!A:J`,
+    range: "גיליון1!A:J",
   });
 
   const rows = response.data.values || [];
