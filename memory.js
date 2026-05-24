@@ -20,6 +20,18 @@ const SPREADSHEET_ID =
 const SHEET_NAME = "גיליון1";
 const RANGE = `${SHEET_NAME}!A:M`;
 
+function getIsraelDateTime() {
+  return new Date().toLocaleString("he-IL", {
+    timeZone: "Asia/Jerusalem",
+    weekday: "long",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export async function getLeadByPhone(phone) {
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
@@ -32,7 +44,6 @@ export async function getLeadByPhone(phone) {
     if (rows[i][0] === phone) {
       return {
         rowIndex: i + 1,
-
         phone: rows[i][0] || "",
         name: rows[i][1] || "",
         birth_date: rows[i][2] || "",
@@ -74,24 +85,15 @@ USER: ${data.last_message || ""}
     updatedHistory,
     data.lead_summary || existing?.lead_summary || "",
     data.notified || existing?.notified || "",
-    new Date().toLocaleString("he-IL", {
-  timeZone: "Asia/Jerusalem",
-  weekday: "long",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-}),
+    getIsraelDateTime(),
+  ]];
 
   if (existing) {
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
       range: `${SHEET_NAME}!A${existing.rowIndex}:M${existing.rowIndex}`,
       valueInputOption: "USER_ENTERED",
-      requestBody: {
-        values,
-      },
+      requestBody: { values },
     });
 
     console.log("Lead updated");
@@ -102,9 +104,7 @@ USER: ${data.last_message || ""}
     spreadsheetId: SPREADSHEET_ID,
     range: RANGE,
     valueInputOption: "USER_ENTERED",
-    requestBody: {
-      values,
-    },
+    requestBody: { values },
   });
 
   console.log("Lead created");
