@@ -324,17 +324,26 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    await upsertLead({
-      phone: from,
-      name: extractedDetails.name,
-      birth_date: extractedDetails.birth_date,
-      id_number: extractedDetails.id_number,
-      treatment: detected.treatment,
-      status: detected.status,
-      human_takeover: existingLead?.human_takeover || "false",
-      last_message: text,
-      lead_summary: leadSummary,
-    });
+    const shouldNotify =
+  detected.status === "wants_appointment" &&
+  existingLead?.notified !== "sent";
+
+await upsertLead({
+  phone: from,
+  name: extractedDetails.name,
+  birth_date: extractedDetails.birth_date,
+  id_number: extractedDetails.id_number,
+  treatment: detected.treatment,
+  status: detected.status,
+  human_takeover: existingLead?.human_takeover || "false",
+  last_message: text,
+  lead_summary: leadSummary,
+  notified: shouldNotify ? "sent" : existingLead?.notified || "",
+});
+
+if (shouldNotify) {
+  await notifyAdmin(leadSummary);
+}
 
     const memoryContext = `
 מידע קודם:
