@@ -7,6 +7,7 @@ app.use(express.json());
 const OPENAI_KEY = process.env.OPENAI_KEY;
 const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 const PHONE_ID = process.env.PHONE_ID;
+const ADMIN_PHONE = process.env.ADMIN_PHONE;
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "12345";
 
 function isHumanRequest(text = "") {
@@ -67,10 +68,8 @@ function extractUserDetails(text = "") {
 
   for (const pattern of namePatterns) {
     const match = text.match(pattern);
-
     if (match?.[1]) {
       const possibleName = match[1].trim();
-
       if (!blockedNames.includes(possibleName)) {
         details.name = possibleName;
         break;
@@ -121,13 +120,7 @@ function detectTreatment(text = "", existingLead = null) {
   };
 }
 
-function buildLeadSummary({
-  from,
-  existingLead,
-  extractedDetails,
-  detected,
-  text,
-}) {
+function buildLeadSummary({ from, existingLead, extractedDetails, detected, text }) {
   const name = extractedDetails.name || existingLead?.name || "לא נמסר";
   const birthDate = extractedDetails.birth_date || existingLead?.birth_date || "לא נמסר";
   const idNumber = extractedDetails.id_number || existingLead?.id_number || "לא נמסר";
@@ -145,16 +138,20 @@ function buildLeadSummary({
 הודעה אחרונה: ${text}`;
 }
 
-function shouldTransferToHuman(status, text = "") {
-  const t = text.toLowerCase();
+async function notifyAdmin(summary) {
+  if (!ADMIN_PHONE) {
+    console.log("ADMIN_PHONE is missing");
+    return;
+  }
 
-  return (
-    status === "waiting_for_human" ||
-    t.includes("כן") ||
-    t.includes("שלחתי") ||
-    t.includes("זה הפרטים") ||
-    t.includes("אלה הפרטים")
+  await sendWhatsAppMessage(
+    ADMIN_PHONE,
+    `📌 פנייה חדשה מהבוט
+
+${summary}`
   );
+
+  console.log("Admin notification sent");
 }
 
 const clinicKnowledge = `
@@ -290,7 +287,10 @@ app.post("/webhook", async (req, res) => {
         human_takeover: "true",
         last_message: text,
         lead_summary: leadSummary,
+        notified: "sent",
       });
+
+      await notifyAdmin(leadSummary);
 
       await sendWhatsAppMessage(
         from,
@@ -311,32 +311,14 @@ app.post("/webhook", async (req, res) => {
         human_takeover: "true",
         last_message: text,
         lead_summary: leadSummary,
+        notified: "sent",
       });
+
+      await notifyAdmin(leadSummary);
 
       await sendWhatsAppMessage(
         from,
         "תודה 😊 הפרטים התקבלו והועברו למזכירות המרפאה. נציג יחזור אליכם בהקדם עם אפשרויות זמינות לתיאום."
-      );
-
-      return res.sendStatus(200);
-    }
-
-    if (detected.status === "wants_appointment" && shouldTransferToHuman(existingLead?.status, text)) {
-      await upsertLead({
-        phone: from,
-        name: extractedDetails.name,
-        birth_date: extractedDetails.birth_date,
-        id_number: extractedDetails.id_number,
-        treatment: detected.treatment || existingLead?.treatment || "",
-        status: "waiting_for_human",
-        human_takeover: "true",
-        last_message: text,
-        lead_summary: leadSummary,
-      });
-
-      await sendWhatsAppMessage(
-        from,
-        "תודה 😊 העברתי את הבקשה למזכירות המרפאה. נציג יחזור אליכם בהקדם לתיאום."
       );
 
       return res.sendStatus(200);
@@ -388,11 +370,8 @@ ${memoryContext}
 הוראות:
 
 אם יש טיפול שמור, תמשיך לפי אותו טיפול.
-
 אל תשאל שוב שאלה שכבר קיבלת עליה תשובה.
-
 אם המשתמש אמר את השם שלו, השתמש בשם שלו בתשובות.
-
 אם המשתמש שואל על מה דיברנו, תענה לפי הזיכרון והיסטוריית השיחה.
 
 אם המשתמש רוצה לקבוע תור:
@@ -432,9 +411,7 @@ ${memoryContext}
 - נעים ומרגיע
 
 אל תכתוב "מחלקה".
-
 אל תמציא מידע שלא קיים במאגר הידע.
-
 אם אין לך מידע בטוח — תגיד שתבדוק מול צוות המרפאה.
 
 מאגר מידע:
