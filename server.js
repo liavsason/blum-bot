@@ -369,6 +369,9 @@ app.post("/webhook", async (req, res) => {
     });
 
     if (isHumanRequest(text)) {
+      const adminNotified =
+        await notifyAdmin(leadSummary);
+
       await upsertLead({
         phone: from,
         name: extractedDetails.name,
@@ -380,10 +383,8 @@ app.post("/webhook", async (req, res) => {
         human_takeover: "true",
         last_message: text,
         lead_summary: leadSummary,
-        notified: "sent",
+        notified: adminNotified ? "sent" : "failed",
       });
-
-      await notifyAdmin(leadSummary);
 
       await sendWhatsAppMessage(
         from,
@@ -398,6 +399,9 @@ app.post("/webhook", async (req, res) => {
       existingLead?.status ===
         "wants_appointment"
     ) {
+      const adminNotified =
+        await notifyAdmin(leadSummary);
+
       await upsertLead({
         phone: from,
         name: extractedDetails.name,
@@ -412,10 +416,8 @@ app.post("/webhook", async (req, res) => {
         human_takeover: "true",
         last_message: text,
         lead_summary: leadSummary,
-        notified: "sent",
+        notified: adminNotified ? "sent" : "failed",
       });
-
-      await notifyAdmin(leadSummary);
 
       await sendWhatsAppMessage(
         from,
@@ -429,6 +431,13 @@ app.post("/webhook", async (req, res) => {
       detected.status ===
         "wants_appointment" &&
       existingLead?.notified !== "sent";
+
+    let adminNotified = false;
+
+    if (shouldNotify) {
+      adminNotified =
+        await notifyAdmin(leadSummary);
+    }
 
     await upsertLead({
       phone: from,
@@ -444,13 +453,11 @@ app.post("/webhook", async (req, res) => {
       last_message: text,
       lead_summary: leadSummary,
       notified: shouldNotify
-        ? "sent"
+        ? adminNotified
+          ? "sent"
+          : "failed"
         : existingLead?.notified || "",
     });
-
-    if (shouldNotify) {
-      await notifyAdmin(leadSummary);
-    }
 
     const memoryContext = `
 שם: ${
@@ -588,7 +595,7 @@ async function sendWhatsAppMessage(
     }
   );
 
-    const waData = await waRes.json();
+  const waData = await waRes.json();
 
   console.log(
     "WhatsApp send response:",
