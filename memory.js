@@ -74,8 +74,15 @@ USER: ${data.last_message || ""}
     updatedHistory,
     data.lead_summary || existing?.lead_summary || "",
     data.notified || existing?.notified || "",
-    new Date().toISOString(),
-  ]];
+    new Date().toLocaleString("he-IL", {
+  timeZone: "Asia/Jerusalem",
+  weekday: "long",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+}),
 
   if (existing) {
     await sheets.spreadsheets.values.update({
