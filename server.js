@@ -18,6 +18,7 @@ function isHumanRequest(text = "") {
     t.includes("בן אדם") ||
     t.includes("לדבר עם מישהו") ||
     t.includes("שיחזרו אליי") ||
+    t.includes("שיחזרו אלי") ||
     t.includes("оператор") ||
     t.includes("администратор") ||
     t.includes("человек")
@@ -36,7 +37,7 @@ function extractUserDetails(text = "") {
   const details = {};
 
   const phoneMatch = text.match(/05\d[-\s]?\d{7}|9725\d{8}/);
-  if (phoneMatch) details.phone_number = phoneMatch[0];
+  if (phoneMatch) details.contact_phone = phoneMatch[0];
 
   const idMatch = text.match(/\b\d{8,9}\b/);
   if (idMatch) details.id_number = idMatch[0];
@@ -120,6 +121,42 @@ function detectTreatment(text = "", existingLead = null) {
   };
 }
 
+function buildLeadSummary({
+  from,
+  existingLead,
+  extractedDetails,
+  detected,
+  text,
+}) {
+  const name = extractedDetails.name || existingLead?.name || "לא נמסר";
+  const birthDate = extractedDetails.birth_date || existingLead?.birth_date || "לא נמסר";
+  const idNumber = extractedDetails.id_number || existingLead?.id_number || "לא נמסר";
+  const treatment = detected.treatment || existingLead?.treatment || "לא ידוע";
+  const branch = existingLead?.branch || "לא נמסר";
+  const status = detected.status || existingLead?.status || "new";
+
+  return `שם: ${name}
+טלפון וואטסאפ: ${from}
+טיפול: ${treatment}
+סניף מועדף: ${branch}
+תאריך לידה: ${birthDate}
+תעודת זהות: ${idNumber}
+סטטוס: ${status}
+הודעה אחרונה: ${text}`;
+}
+
+function shouldTransferToHuman(status, text = "") {
+  const t = text.toLowerCase();
+
+  return (
+    status === "waiting_for_human" ||
+    t.includes("כן") ||
+    t.includes("שלחתי") ||
+    t.includes("זה הפרטים") ||
+    t.includes("אלה הפרטים")
+  );
+}
+
 const clinicKnowledge = `
 שם המרפאה: מרפאת בלום
 טלפון: 054-234-4742
@@ -169,6 +206,7 @@ GeneO+:
 לא לאבחן רפואית
 לא להבטיח תוצאות
 לא לקבוע תורים
+לא לאשר יום או שעה לתור
 לא לתת המלצה רפואית אישית
 אם יש מצב דחוף להפנות לטלפון המרפאה
 `;
@@ -233,6 +271,14 @@ app.post("/webhook", async (req, res) => {
     const detected = detectTreatment(text, existingLead);
     const extractedDetails = extractUserDetails(text);
 
+    const leadSummary = buildLeadSummary({
+      from,
+      existingLead,
+      extractedDetails,
+      detected,
+      text,
+    });
+
     if (isHumanRequest(text)) {
       await upsertLead({
         phone: from,
@@ -243,6 +289,7 @@ app.post("/webhook", async (req, res) => {
         status: "waiting_for_human",
         human_takeover: "true",
         last_message: text,
+        lead_summary: leadSummary,
       });
 
       await sendWhatsAppMessage(
@@ -260,14 +307,36 @@ app.post("/webhook", async (req, res) => {
         birth_date: extractedDetails.birth_date,
         id_number: extractedDetails.id_number,
         treatment: detected.treatment || existingLead?.treatment || "",
-        status: "waiting_for_human",
+        status: "details_collected",
         human_takeover: "true",
         last_message: text,
+        lead_summary: leadSummary,
       });
 
       await sendWhatsAppMessage(
         from,
-        "תודה 😊 הפרטים התקבלו והועברו למזכירות המרפאה. נחזור אליכם בהקדם עם אפשרויות לתיאום."
+        "תודה 😊 הפרטים התקבלו והועברו למזכירות המרפאה. נציג יחזור אליכם בהקדם עם אפשרויות זמינות לתיאום."
+      );
+
+      return res.sendStatus(200);
+    }
+
+    if (detected.status === "wants_appointment" && shouldTransferToHuman(existingLead?.status, text)) {
+      await upsertLead({
+        phone: from,
+        name: extractedDetails.name,
+        birth_date: extractedDetails.birth_date,
+        id_number: extractedDetails.id_number,
+        treatment: detected.treatment || existingLead?.treatment || "",
+        status: "waiting_for_human",
+        human_takeover: "true",
+        last_message: text,
+        lead_summary: leadSummary,
+      });
+
+      await sendWhatsAppMessage(
+        from,
+        "תודה 😊 העברתי את הבקשה למזכירות המרפאה. נציג יחזור אליכם בהקדם לתיאום."
       );
 
       return res.sendStatus(200);
@@ -282,6 +351,7 @@ app.post("/webhook", async (req, res) => {
       status: detected.status,
       human_takeover: existingLead?.human_takeover || "false",
       last_message: text,
+      lead_summary: leadSummary,
     });
 
     const memoryContext = `
@@ -291,8 +361,13 @@ app.post("/webhook", async (req, res) => {
 טיפול שמור: ${detected.treatment || existingLead?.treatment || "לא ידוע"}
 סטטוס: ${detected.status || existingLead?.status || "new"}
 הודעה קודמת: ${existingLead?.last_message || "אין"}
+
+סיכום לנציג:
+${leadSummary}
+
 היסטוריית שיחה:
 ${existingLead?.conversation_history || "אין"}
+
 הודעה נוכחית:
 ${text}
 `;
