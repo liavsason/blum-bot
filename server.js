@@ -229,17 +229,27 @@ function buildLeadSummary({
 async function notifyAdmin(summary) {
   if (!ADMIN_PHONE) {
     console.log("ADMIN_PHONE missing");
-    return;
+    return false;
   }
 
-  await sendWhatsAppMessage(
+  console.log("Sending admin notification to:", ADMIN_PHONE);
+
+  const result = await sendWhatsAppMessage(
     ADMIN_PHONE,
     `📌 פנייה חדשה מהבוט
 
 ${summary}`
   );
 
+  console.log("Admin notification result:", JSON.stringify(result, null, 2));
+
+  if (result?.error) {
+    console.log("Admin notification failed:", result.error.message);
+    return false;
+  }
+
   console.log("Admin notification sent");
+  return true;
 }
 
 const clinicKnowledge = `
@@ -579,12 +589,14 @@ async function sendWhatsAppMessage(
     }
   );
 
-  const waData = await waRes.json();
+    const waData = await waRes.json();
 
   console.log(
     "WhatsApp send response:",
     JSON.stringify(waData, null, 2)
   );
+
+  return waData;
 }
 
 const PORT =
