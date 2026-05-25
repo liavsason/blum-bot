@@ -226,29 +226,38 @@ function buildLeadSummary({
 }
 
 async function notifyAdmin(summary) {
-  if (!ADMIN_PHONE) {
-    console.log("ADMIN_PHONE missing");
-    return false;
-  }
+  try {
+    if (!ADMIN_PHONE) {
+      console.log("ADMIN_PHONE missing");
+      return false;
+    }
 
-  console.log("Sending admin notification to:", ADMIN_PHONE);
+    console.log("Sending admin notification to:", ADMIN_PHONE);
 
-  const result = await sendWhatsAppMessage(
-    ADMIN_PHONE,
-    `📌 פנייה חדשה מהבוט
+    const result = await sendWhatsAppMessage(
+      ADMIN_PHONE,
+      `📌 פנייה חדשה מהבוט
 
 ${summary}`
-  );
+    );
 
-  console.log("Admin notification result:", JSON.stringify(result, null, 2));
+    console.log("Admin notification result:", JSON.stringify(result, null, 2));
 
-  if (result?.error) {
-    console.log("Admin notification failed:", result.error.message);
+    if (
+      result?.error ||
+      !result?.messages ||
+      !result?.messages?.[0]?.id
+    ) {
+      console.log("Admin notification failed");
+      return false;
+    }
+
+    console.log("Admin notification sent successfully");
+    return true;
+  } catch (err) {
+    console.log("notifyAdmin crash:", err);
     return false;
   }
-
-  console.log("Admin notification sent");
-  return true;
 }
 
 const clinicKnowledge = `
@@ -383,7 +392,9 @@ app.post("/webhook", async (req, res) => {
         human_takeover: "true",
         last_message: text,
         lead_summary: leadSummary,
-        notified: adminNotified ? "sent" : "failed",
+        notified: adminNotified
+          ? "sent"
+          : "failed",
       });
 
       await sendWhatsAppMessage(
@@ -416,7 +427,9 @@ app.post("/webhook", async (req, res) => {
         human_takeover: "true",
         last_message: text,
         lead_summary: leadSummary,
-        notified: adminNotified ? "sent" : "failed",
+        notified: adminNotified
+          ? "sent"
+          : "failed",
       });
 
       await sendWhatsAppMessage(
@@ -578,31 +591,50 @@ async function sendWhatsAppMessage(
   to,
   body
 ) {
-  const waRes = await fetch(
-    `https://graph.facebook.com/v25.0/${PHONE_ID}/messages`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${WHATSAPP_TOKEN}`,
-        "Content-Type":
-          "application/json",
-      },
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        to,
-        text: { body },
-      }),
+  try {
+    const waRes = await fetch(
+      `https://graph.facebook.com/v25.0/${PHONE_ID}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${WHATSAPP_TOKEN}`,
+          "Content-Type":
+            "application/json",
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          to,
+          type: "text",
+          text: { body },
+        }),
+      }
+    );
+
+    const waData = await waRes.json();
+
+    console.log(
+      "WhatsApp send response:",
+      JSON.stringify(waData, null, 2)
+    );
+
+    if (!waRes.ok) {
+      return {
+        error: waData.error || {
+          message: "Unknown WhatsApp error",
+        },
+      };
     }
-  );
 
-  const waData = await waRes.json();
+    return waData;
+  } catch (err) {
+    console.log("sendWhatsAppMessage crash:", err);
 
-  console.log(
-    "WhatsApp send response:",
-    JSON.stringify(waData, null, 2)
-  );
-
-  return waData;
+    return {
+      error: {
+        message: err.message,
+      },
+    };
+  }
 }
 
 const PORT =
