@@ -243,8 +243,12 @@ if (
   t.includes("ייעוץ") ||
   t.includes("פגישה") ||
   t.includes("запис") ||
+  t.includes("записаться") ||
   t.includes("консультац") ||
-  t.includes("встреча")
+  t.includes("встреча") ||
+  t.includes("прием") ||
+  t.includes("приём") ||
+  t.includes("стоматолог")
 ) {
   return {
     treatment: existingLead?.treatment || "",
