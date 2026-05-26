@@ -82,7 +82,6 @@ function extractUserDetails(text = "") {
 }
 
 function canNotifyAgain(lastNotifiedAt) {
-
   if (!lastNotifiedAt) return true;
 
   const lastTime = new Date(lastNotifiedAt).getTime();
@@ -370,6 +369,41 @@ app.post("/webhook", async (req, res) => {
     if (
       existingLead?.human_takeover === "true"
     ) {
+      const shouldNotifyHumanTakeover =
+        canNotifyAgain(existingLead?.last_notified_at);
+
+      let adminNotified = false;
+
+      const humanTakeoverSummary = `שם: ${existingLead?.name || "לא נמסר"}
+טלפון וואטסאפ: ${from}
+טיפול: ${existingLead?.treatment || "לא ידוע"}
+סניף מועדף: ${existingLead?.branch || "לא נמסר"}
+תאריך לידה: ${existingLead?.birth_date || "לא נמסר"}
+תעודת זהות: ${existingLead?.id_number || "לא נמסר"}
+סטטוס: ${existingLead?.status || "human_handling"}
+הודעה אחרונה: ${text}`;
+
+      if (shouldNotifyHumanTakeover) {
+        adminNotified =
+          await notifyAdmin(humanTakeoverSummary);
+      }
+
+      await upsertLead({
+        phone: from,
+        status: existingLead?.status || "human_handling",
+        human_takeover: "true",
+        last_message: text,
+        lead_summary: humanTakeoverSummary,
+        notified: shouldNotifyHumanTakeover
+          ? adminNotified
+            ? "sent"
+            : "failed"
+          : existingLead?.notified || "",
+        last_notified_at: adminNotified
+          ? new Date().toISOString()
+          : existingLead?.last_notified_at || "",
+      });
+
       return res.sendStatus(200);
     }
 
@@ -392,8 +426,15 @@ app.post("/webhook", async (req, res) => {
     });
 
     if (isHumanRequest(text)) {
-      const adminNotified =
-        await notifyAdmin(leadSummary);
+      const shouldNotifyHumanRequest =
+        canNotifyAgain(existingLead?.last_notified_at);
+
+      let adminNotified = false;
+
+      if (shouldNotifyHumanRequest) {
+        adminNotified =
+          await notifyAdmin(leadSummary);
+      }
 
       await upsertLead({
         phone: from,
@@ -406,9 +447,14 @@ app.post("/webhook", async (req, res) => {
         human_takeover: "true",
         last_message: text,
         lead_summary: leadSummary,
-        notified: adminNotified
-          ? "sent"
-          : "failed",
+        notified: shouldNotifyHumanRequest
+          ? adminNotified
+            ? "sent"
+            : "failed"
+          : existingLead?.notified || "",
+        last_notified_at: adminNotified
+          ? new Date().toISOString()
+          : existingLead?.last_notified_at || "",
       });
 
       await sendWhatsAppMessage(
@@ -424,8 +470,15 @@ app.post("/webhook", async (req, res) => {
       existingLead?.status ===
         "wants_appointment"
     ) {
-      const adminNotified =
-        await notifyAdmin(leadSummary);
+      const shouldNotifyDetailsCollected =
+        canNotifyAgain(existingLead?.last_notified_at);
+
+      let adminNotified = false;
+
+      if (shouldNotifyDetailsCollected) {
+        adminNotified =
+          await notifyAdmin(leadSummary);
+      }
 
       await upsertLead({
         phone: from,
@@ -441,9 +494,14 @@ app.post("/webhook", async (req, res) => {
         human_takeover: "true",
         last_message: text,
         lead_summary: leadSummary,
-        notified: adminNotified
-          ? "sent"
-          : "failed",
+        notified: shouldNotifyDetailsCollected
+          ? adminNotified
+            ? "sent"
+            : "failed"
+          : existingLead?.notified || "",
+        last_notified_at: adminNotified
+          ? new Date().toISOString()
+          : existingLead?.last_notified_at || "",
       });
 
       await sendWhatsAppMessage(
@@ -457,7 +515,7 @@ app.post("/webhook", async (req, res) => {
     const shouldNotify =
       detected.status ===
         "wants_appointment" &&
-      existingLead?.notified !== "sent";
+      canNotifyAgain(existingLead?.last_notified_at);
 
     let adminNotified = false;
 
@@ -484,6 +542,9 @@ app.post("/webhook", async (req, res) => {
           ? "sent"
           : "failed"
         : existingLead?.notified || "",
+      last_notified_at: adminNotified
+        ? new Date().toISOString()
+        : existingLead?.last_notified_at || "",
     });
 
     const memoryContext = `
