@@ -95,7 +95,7 @@ USER: ${data.last_message || ""}
   if (existing) {
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A${existing.rowIndex}:M${existing.rowIndex}`,
+      range: `${SHEET_NAME}!A${existing.rowIndex}:O${existing.rowIndex}`,
       valueInputOption: "USER_ENTERED",
       requestBody: { values },
     });
