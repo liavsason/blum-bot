@@ -81,6 +81,20 @@ function extractUserDetails(text = "") {
   return details;
 }
 
+function canNotifyAgain(lastNotifiedAt) {
+
+  if (!lastNotifiedAt) return true;
+
+  const lastTime = new Date(lastNotifiedAt).getTime();
+  const now = Date.now();
+
+  if (Number.isNaN(lastTime)) return true;
+
+  const fiveMinutes = 5 * 60 * 1000;
+
+  return now - lastTime >= fiveMinutes;
+}
+
 function detectBranch(text = "", existingLead = null) {
   const t = text.toLowerCase();
 
