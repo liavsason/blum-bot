@@ -161,12 +161,18 @@ function detectTreatment(text = "", existingLead = null) {
     };
   }
 
-  if (t.includes("הלבנה")) {
-    return {
-      treatment: "הלבנת שיניים",
-      status: "asked_about_whitening",
-    };
-  }
+  if (
+  t.includes("הלבנה") ||
+  t.includes("הלבנת") ||
+  t.includes("הלבנת שיניים") ||
+  t.includes("להלבין") ||
+  t.includes("whitening")
+) {
+  return {
+    treatment: "הלבנת שיניים",
+    status: "asked_about_whitening",
+  };
+}
 
   if (
     t.includes("יישור") ||
