@@ -81,17 +81,56 @@ function extractUserDetails(text = "") {
   return details;
 }
 
+function getIsraelDateTime() {
+  return new Date().toLocaleString("he-IL", {
+    timeZone: "Asia/Jerusalem",
+    weekday: "long",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getPriority(status) {
+  if (
+    status === "waiting_for_human" ||
+    status === "details_collected"
+  ) {
+    return "🔴 חם";
+  }
+
+  if (status === "wants_appointment") {
+    return "🟡 בינוני";
+  }
+
+  return "🟢 רגיל";
+}
+
 function canNotifyAgain(lastNotifiedAt) {
   if (!lastNotifiedAt) return true;
 
-  const lastTime = new Date(lastNotifiedAt).getTime();
-  const now = Date.now();
+  let lastTime = new Date(lastNotifiedAt).getTime();
+
+  if (Number.isNaN(lastTime)) {
+    const match = String(lastNotifiedAt).match(
+      /(\d{1,2})[./](\d{1,2})[./](\d{4}).*?(\d{1,2}):(\d{2})/
+    );
+
+    if (match) {
+      const [, day, month, year, hour, minute] = match;
+      lastTime = new Date(
+        `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}T${hour.padStart(2, "0")}:${minute}:00+03:00`
+      ).getTime();
+    }
+  }
 
   if (Number.isNaN(lastTime)) return true;
 
   const fiveMinutes = 5 * 60 * 1000;
 
-  return now - lastTime >= fiveMinutes;
+  return Date.now() - lastTime >= fiveMinutes;
 }
 
 function detectBranch(text = "", existingLead = null) {
@@ -347,6 +386,7 @@ app.post("/webhook", async (req, res) => {
         human_takeover: "true",
         status: "human_handling",
         last_message: text,
+        priority: getPriority("human_handling"),
       });
 
       return res.sendStatus(200);
@@ -358,6 +398,7 @@ app.post("/webhook", async (req, res) => {
         human_takeover: "false",
         status: "bot_active",
         last_message: text,
+        priority: getPriority("bot_active"),
       });
 
       return res.sendStatus(200);
@@ -396,12 +437,13 @@ app.post("/webhook", async (req, res) => {
         lead_summary: humanTakeoverSummary,
         notified: shouldNotifyHumanTakeover
           ? adminNotified
-            ? "sent"
-            : "failed"
+            ? "✅ sent"
+            : "❌ failed"
           : existingLead?.notified || "",
         last_notified_at: adminNotified
-          ? new Date().toISOString()
+          ? getIsraelDateTime()
           : existingLead?.last_notified_at || "",
+        priority: getPriority(existingLead?.status || "human_handling"),
       });
 
       return res.sendStatus(200);
@@ -449,12 +491,13 @@ app.post("/webhook", async (req, res) => {
         lead_summary: leadSummary,
         notified: shouldNotifyHumanRequest
           ? adminNotified
-            ? "sent"
-            : "failed"
+            ? "✅ sent"
+            : "❌ failed"
           : existingLead?.notified || "",
         last_notified_at: adminNotified
-          ? new Date().toISOString()
+          ? getIsraelDateTime()
           : existingLead?.last_notified_at || "",
+        priority: getPriority("waiting_for_human"),
       });
 
       await sendWhatsAppMessage(
@@ -496,12 +539,13 @@ app.post("/webhook", async (req, res) => {
         lead_summary: leadSummary,
         notified: shouldNotifyDetailsCollected
           ? adminNotified
-            ? "sent"
-            : "failed"
+            ? "✅ sent"
+            : "❌ failed"
           : existingLead?.notified || "",
         last_notified_at: adminNotified
-          ? new Date().toISOString()
+          ? getIsraelDateTime()
           : existingLead?.last_notified_at || "",
+        priority: getPriority("details_collected"),
       });
 
       await sendWhatsAppMessage(
@@ -539,12 +583,13 @@ app.post("/webhook", async (req, res) => {
       lead_summary: leadSummary,
       notified: shouldNotify
         ? adminNotified
-          ? "sent"
-          : "failed"
+          ? "✅ sent"
+          : "❌ failed"
         : existingLead?.notified || "",
       last_notified_at: adminNotified
-        ? new Date().toISOString()
+        ? getIsraelDateTime()
         : existingLead?.last_notified_at || "",
+      priority: getPriority(detected.status),
     });
 
     const memoryContext = `
@@ -654,6 +699,11 @@ ${text}
       from,
       reply
     );
+
+    await upsertLead({
+      phone: from,
+      last_bot_reply: reply,
+    });
 
     return res.sendStatus(200);
   } catch (error) {
