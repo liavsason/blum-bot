@@ -57,6 +57,8 @@ export async function getLeadByPhone(phone) {
         lead_summary: rows[i][10] || "",
         notified: rows[i][11] || "",
         updated_at: rows[i][12] || "",
+        priority: rows[i][13] || "",
+        last_bot_reply: rows[i][14] || "",
       };
     }
   }
