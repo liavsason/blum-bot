@@ -154,19 +154,28 @@ function detectBranch(text = "", existingLead = null) {
 function detectTreatment(text = "", existingLead = null) {
   const t = text.toLowerCase();
 
-  if (t.includes("שיננית") || t.includes("ניקוי")) {
-    return {
-      treatment: "שיננית",
-      status: "asked_about_hygienist",
-    };
-  }
-
   if (
+  t.includes("שיננית") ||
+  t.includes("ניקוי") ||
+  t.includes("чистка") ||
+  t.includes("гигиена") ||
+  t.includes("чистка зубов")
+) {
+  return {
+    treatment: "שיננית",
+    status: "asked_about_hygienist",
+  };
+}
+
+if (
   t.includes("הלבנה") ||
   t.includes("הלבנת") ||
   t.includes("הלבנת שיניים") ||
   t.includes("להלבין") ||
-  t.includes("whitening")
+  t.includes("whitening") ||
+  t.includes("отбел") ||
+  t.includes("отбеливание") ||
+  t.includes("белые зубы")
 ) {
   return {
     treatment: "הלבנת שיניים",
@@ -174,61 +183,74 @@ function detectTreatment(text = "", existingLead = null) {
   };
 }
 
-  if (
-    t.includes("יישור") ||
-    t.includes("גשר") ||
-    t.includes("אורתודונט")
-  ) {
-    return {
-      treatment: "יישור שיניים",
-      status: "asked_about_ortho",
-    };
-  }
+if (
+  t.includes("יישור") ||
+  t.includes("גשר") ||
+  t.includes("אורתודונט") ||
+  t.includes("брекет") ||
+  t.includes("ортодонт") ||
+  t.includes("выравнивание зубов")
+) {
+  return {
+    treatment: "יישור שיניים",
+    status: "asked_about_ortho",
+  };
+}
 
-  if (
-    t.includes("אסתטיקה") ||
-    t.includes("בוטוקס") ||
-    t.includes("חומצה")
-  ) {
-    return {
-      treatment: "אסתטיקה",
-      status: "asked_about_aesthetic",
-    };
-  }
+if (
+  t.includes("אסתטיקה") ||
+  t.includes("בוטוקס") ||
+  t.includes("חומצה") ||
+  t.includes("ботокс") ||
+  t.includes("эстет") ||
+  t.includes("губы") ||
+  t.includes("филлер")
+) {
+  return {
+    treatment: "אסתטיקה",
+    status: "asked_about_aesthetic",
+  };
+}
 
-  if (
-    t.includes("geneo") ||
-    t.includes("ג׳נאו") ||
-    t.includes("ג'נאו")
-  ) {
-    return {
-      treatment: "GeneO+",
-      status: "asked_about_geneo",
-    };
-  }
+if (
+  t.includes("geneo") ||
+  t.includes("ג׳נאו") ||
+  t.includes("ג'נאו") ||
+  t.includes("дженео")
+) {
+  return {
+    treatment: "GeneO+",
+    status: "asked_about_geneo",
+  };
+}
 
-  if (
-    t.includes("רג׳ורן") ||
-    t.includes("רג'ורן") ||
-    t.includes("זרע סלמון")
-  ) {
-    return {
-      treatment: "רג׳ורן",
-      status: "asked_about_rejuran",
-    };
-  }
+if (
+  t.includes("רג׳ורן") ||
+  t.includes("רג'ורן") ||
+  t.includes("זרע סלמון") ||
+  t.includes("rejuran") ||
+  t.includes("реджуран")
+) {
+  return {
+    treatment: "רג׳ורן",
+    status: "asked_about_rejuran",
+  };
+}
 
-  if (
-    t.includes("תור") ||
-    t.includes("לקבוע") ||
-    t.includes("ייעוץ") ||
-    t.includes("פגישה")
-  ) {
-    return {
-      treatment: existingLead?.treatment || "",
-      status: "wants_appointment",
-    };
-  }
+if (
+  t.includes("תור") ||
+  t.includes("לקבוע") ||
+  t.includes("ייעוץ") ||
+  t.includes("פגישה") ||
+  t.includes("запис") ||
+  t.includes("консультац") ||
+  t.includes("встреча")
+) {
+  return {
+    treatment: existingLead?.treatment || "",
+    status: "wants_appointment",
+  };
+}
 
   return {
     treatment: existingLead?.treatment || "",
