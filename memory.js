@@ -88,6 +88,8 @@ USER: ${data.last_message || ""}
     data.lead_summary || existing?.lead_summary || "",
     data.notified || existing?.notified || "",
     getIsraelDateTime(),
+    data.priority || existing?.priority || "",
+    data.last_bot_reply || existing?.last_bot_reply || "",
   ]];
 
   if (existing) {
