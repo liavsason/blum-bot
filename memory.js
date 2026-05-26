@@ -18,7 +18,7 @@ const SPREADSHEET_ID =
   process.env.SPREADSHEET_ID || process.env.GOOGLE_SHEET_ID;
 
 const SHEET_NAME = "גיליון1";
-const RANGE = `${SHEET_NAME}!A:M`;
+const RANGE = `${SHEET_NAME}!A:O`;
 
 function getIsraelDateTime() {
   return new Date().toLocaleString("he-IL", {
