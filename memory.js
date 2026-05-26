@@ -18,7 +18,7 @@ const SPREADSHEET_ID =
   process.env.SPREADSHEET_ID || process.env.GOOGLE_SHEET_ID;
 
 const SHEET_NAME = "גיליון1";
-const RANGE = `${SHEET_NAME}!A:O`;
+const RANGE = `${SHEET_NAME}!A:P`;
 
 function getIsraelDateTime() {
   return new Date().toLocaleString("he-IL", {
@@ -59,6 +59,7 @@ export async function getLeadByPhone(phone) {
         updated_at: rows[i][12] || "",
         priority: rows[i][13] || "",
         last_bot_reply: rows[i][14] || "",
+        last_notified_at: rows[i][15] || "",
       };
     }
   }
@@ -90,12 +91,13 @@ USER: ${data.last_message || ""}
     getIsraelDateTime(),
     data.priority || existing?.priority || "",
     data.last_bot_reply || existing?.last_bot_reply || "",
+    data.last_notified_at || existing?.last_notified_at || "",
   ]];
 
   if (existing) {
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A${existing.rowIndex}:O${existing.rowIndex}`,
+      range: `${SHEET_NAME}!A${existing.rowIndex}:P${existing.rowIndex}`,
       valueInputOption: "USER_ENTERED",
       requestBody: { values },
     });
