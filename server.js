@@ -120,6 +120,7 @@ function canNotifyAgain(lastNotifiedAt) {
 
     if (match) {
       const [, day, month, year, hour, minute] = match;
+
       lastTime = new Date(
         `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}T${hour.padStart(2, "0")}:${minute}:00+03:00`
       ).getTime();
@@ -293,7 +294,10 @@ async function notifyAdmin(summary) {
 ${summary}`
     );
 
-    console.log("Admin notification result:", JSON.stringify(result, null, 2));
+    console.log(
+      "Admin notification result:",
+      JSON.stringify(result, null, 2)
+    );
 
     if (
       result?.error ||
@@ -443,7 +447,9 @@ app.post("/webhook", async (req, res) => {
         last_notified_at: adminNotified
           ? getIsraelDateTime()
           : existingLead?.last_notified_at || "",
-        priority: getPriority(existingLead?.status || "human_handling"),
+        priority: getPriority(
+          existingLead?.status || "human_handling"
+        ),
       });
 
       return res.sendStatus(200);
@@ -500,10 +506,18 @@ app.post("/webhook", async (req, res) => {
         priority: getPriority("waiting_for_human"),
       });
 
+      const botReply =
+        "בשמחה 😊 הפנייה הועברה לצוות המרפאה ונציג יחזור אליך בהקדם.";
+
       await sendWhatsAppMessage(
         from,
-        "בשמחה 😊 הפנייה הועברה לצוות המרפאה ונציג יחזור אליך בהקדם."
+        botReply
       );
+
+      await upsertLead({
+        phone: from,
+        last_bot_reply: botReply,
+      });
 
       return res.sendStatus(200);
     }
@@ -548,10 +562,18 @@ app.post("/webhook", async (req, res) => {
         priority: getPriority("details_collected"),
       });
 
+      const botReply =
+        "תודה 😊 הפרטים התקבלו והועברו למזכירות המרפאה. נציג יחזור אליכם בהקדם עם אפשרויות זמינות לתיאום.";
+
       await sendWhatsAppMessage(
         from,
-        "תודה 😊 הפרטים התקבלו והועברו למזכירות המרפאה. נציג יחזור אליכם בהקדם עם אפשרויות זמינות לתיאום."
+        botReply
       );
+
+      await upsertLead({
+        phone: from,
+        last_bot_reply: botReply,
+      });
 
       return res.sendStatus(200);
     }
@@ -559,7 +581,9 @@ app.post("/webhook", async (req, res) => {
     const shouldNotify =
       detected.status ===
         "wants_appointment" &&
-      canNotifyAgain(existingLead?.last_notified_at);
+      canNotifyAgain(
+        existingLead?.last_notified_at
+      );
 
     let adminNotified = false;
 
@@ -589,7 +613,9 @@ app.post("/webhook", async (req, res) => {
       last_notified_at: adminNotified
         ? getIsraelDateTime()
         : existingLead?.last_notified_at || "",
-      priority: getPriority(detected.status),
+      priority: getPriority(
+        detected.status
+      ),
     });
 
     const memoryContext = `
@@ -752,7 +778,10 @@ async function sendWhatsAppMessage(
 
     return waData;
   } catch (err) {
-    console.log("sendWhatsAppMessage crash:", err);
+    console.log(
+      "sendWhatsAppMessage crash:",
+      err
+    );
 
     return {
       error: {
