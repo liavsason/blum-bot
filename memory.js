@@ -32,6 +32,22 @@ function getIsraelDateTime() {
   });
 }
 
+async function getSheetIdByName(sheetName) {
+  const response = await sheets.spreadsheets.get({
+    spreadsheetId: SPREADSHEET_ID,
+  });
+
+  const sheet = response.data.sheets.find(
+    (s) => s.properties.title === sheetName
+  );
+
+  if (!sheet) {
+    throw new Error(`Sheet not found: ${sheetName}`);
+  }
+
+  return sheet.properties.sheetId;
+}
+
 export async function getLeadByPhone(phone) {
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
@@ -106,9 +122,30 @@ USER: ${data.last_message || ""}
     return;
   }
 
-  await sheets.spreadsheets.values.append({
+  const sheetId = await getSheetIdByName(SHEET_NAME);
+
+  await sheets.spreadsheets.batchUpdate({
     spreadsheetId: SPREADSHEET_ID,
-    range: RANGE,
+    requestBody: {
+      requests: [
+        {
+          insertDimension: {
+            range: {
+              sheetId,
+              dimension: "ROWS",
+              startIndex: 1,
+              endIndex: 2,
+            },
+            inheritFromBefore: false,
+          },
+        },
+      ],
+    },
+  });
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${SHEET_NAME}!A2:P2`,
     valueInputOption: "USER_ENTERED",
     requestBody: { values },
   });
