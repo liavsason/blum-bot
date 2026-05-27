@@ -22,8 +22,17 @@ function isHumanRequest(text = "") {
     t.includes("שיחזרו אלי") ||
     t.includes("оператор") ||
     t.includes("администратор") ||
-    t.includes("человек")
+    t.includes("админ") ||
+    t.includes("человек") ||
+    t.includes("живой человек") ||
+    t.includes("связаться") ||
+    t.includes("перезвон") ||
+    t.includes("позвон")
   );
+}
+
+function isRussian(text = "") {
+  return /[а-яА-ЯёЁ]/.test(text);
 }
 
 function hasPersonalDetails(text = "") {
@@ -51,6 +60,8 @@ function extractUserDetails(text = "") {
     /שמי\s+([א-תa-zA-Z׳״'\- ]{2,30})(?=\s+(?:ואני|ורוצה|רוצה|מעוניין|מעוניינת|צריך|צריכה|מבקש|מבקשת)|$|,|\.|!|\?)/i,
     /השם שלי\s+([א-תa-zA-Z׳״'\- ]{2,30})(?=\s+(?:ואני|ורוצה|רוצה|מעוניין|מעוניינת|צריך|צריכה|מבקש|מבקשת)|$|,|\.|!|\?)/i,
     /меня зовут\s+([а-яА-Яa-zA-ZёЁ\- ]{2,30})(?=\s|$|,|\.|!|\?)/i,
+    /мое имя\s+([а-яА-Яa-zA-ZёЁ\- ]{2,30})(?=\s|$|,|\.|!|\?)/i,
+    /моё имя\s+([а-яА-Яa-zA-ZёЁ\- ]{2,30})(?=\s|$|,|\.|!|\?)/i,
   ];
 
   const blockedNames = [
@@ -63,6 +74,12 @@ function extractUserDetails(text = "") {
     "מעוניינת",
     "מבקש",
     "מבקשת",
+    "хочу",
+    "записаться",
+    "прием",
+    "приём",
+    "консультация",
+    "чистка",
   ];
 
   for (const pattern of namePatterns) {
@@ -137,13 +154,20 @@ function canNotifyAgain(lastNotifiedAt) {
 function detectBranch(text = "", existingLead = null) {
   const t = text.toLowerCase();
 
-  if (t.includes("חולון")) {
+  if (
+    t.includes("חולון") ||
+    t.includes("холон")
+  ) {
     return "חולון";
   }
 
   if (
     t.includes("כרמי יוסף") ||
-    t.includes("כרמי")
+    t.includes("כרמי") ||
+    t.includes("кармей йосеф") ||
+    t.includes("карми йосеф") ||
+    t.includes("кармей") ||
+    t.includes("карми")
   ) {
     return "כרמי יוסף";
   }
@@ -155,106 +179,117 @@ function detectTreatment(text = "", existingLead = null) {
   const t = text.toLowerCase();
 
   if (
-  t.includes("שיננית") ||
-  t.includes("ניקוי") ||
-  t.includes("чистка") ||
-  t.includes("гигиена") ||
-  t.includes("чистка зубов")
-) {
-  return {
-    treatment: "שיננית",
-    status: "asked_about_hygienist",
-  };
-}
+    t.includes("שיננית") ||
+    t.includes("ניקוי") ||
+    t.includes("чистка") ||
+    t.includes("гигиена") ||
+    t.includes("гигиенист") ||
+    t.includes("профгигиена") ||
+    t.includes("снятие камня") ||
+    t.includes("чистка зубов")
+  ) {
+    return {
+      treatment: "שיננית",
+      status: "asked_about_hygienist",
+    };
+  }
 
-if (
-  t.includes("הלבנה") ||
-  t.includes("הלבנת") ||
-  t.includes("הלבנת שיניים") ||
-  t.includes("להלבין") ||
-  t.includes("whitening") ||
-  t.includes("отбел") ||
-  t.includes("отбеливание") ||
-  t.includes("белые зубы")
-) {
-  return {
-    treatment: "הלבנת שיניים",
-    status: "asked_about_whitening",
-  };
-}
+  if (
+    t.includes("הלבנה") ||
+    t.includes("הלבנת") ||
+    t.includes("הלבנת שיניים") ||
+    t.includes("להלבין") ||
+    t.includes("whitening") ||
+    t.includes("отбел") ||
+    t.includes("отбеливание") ||
+    t.includes("отбелить") ||
+    t.includes("осветлить") ||
+    t.includes("белые зубы")
+  ) {
+    return {
+      treatment: "הלבנת שיניים",
+      status: "asked_about_whitening",
+    };
+  }
 
-if (
-  t.includes("יישור") ||
-  t.includes("גשר") ||
-  t.includes("אורתודונט") ||
-  t.includes("брекет") ||
-  t.includes("ортодонт") ||
-  t.includes("выравнивание зубов")
-) {
-  return {
-    treatment: "יישור שיניים",
-    status: "asked_about_ortho",
-  };
-}
+  if (
+    t.includes("יישור") ||
+    t.includes("גשר") ||
+    t.includes("אורתודונט") ||
+    t.includes("брекет") ||
+    t.includes("ортодонт") ||
+    t.includes("элайнер") ||
+    t.includes("исправление прикуса") ||
+    t.includes("выравнивание зубов")
+  ) {
+    return {
+      treatment: "יישור שיניים",
+      status: "asked_about_ortho",
+    };
+  }
 
-if (
-  t.includes("אסתטיקה") ||
-  t.includes("בוטוקס") ||
-  t.includes("חומצה") ||
-  t.includes("ботокс") ||
-  t.includes("эстет") ||
-  t.includes("губы") ||
-  t.includes("филлер")
-) {
-  return {
-    treatment: "אסתטיקה",
-    status: "asked_about_aesthetic",
-  };
-}
+  if (
+    t.includes("אסתטיקה") ||
+    t.includes("בוטוקס") ||
+    t.includes("חומצה") ||
+    t.includes("ботокс") ||
+    t.includes("эстет") ||
+    t.includes("губы") ||
+    t.includes("филлер") ||
+    t.includes("гиалурон") ||
+    t.includes("кислота") ||
+    t.includes("морщин")
+  ) {
+    return {
+      treatment: "אסתטיקה",
+      status: "asked_about_aesthetic",
+    };
+  }
 
-if (
-  t.includes("geneo") ||
-  t.includes("ג׳נאו") ||
-  t.includes("ג'נאו") ||
-  t.includes("дженео")
-) {
-  return {
-    treatment: "GeneO+",
-    status: "asked_about_geneo",
-  };
-}
+  if (
+    t.includes("geneo") ||
+    t.includes("ג׳נאו") ||
+    t.includes("ג'נאו") ||
+    t.includes("дженео")
+  ) {
+    return {
+      treatment: "GeneO+",
+      status: "asked_about_geneo",
+    };
+  }
 
-if (
-  t.includes("רג׳ורן") ||
-  t.includes("רג'ורן") ||
-  t.includes("זרע סלמון") ||
-  t.includes("rejuran") ||
-  t.includes("реджуран")
-) {
-  return {
-    treatment: "רג׳ורן",
-    status: "asked_about_rejuran",
-  };
-}
+  if (
+    t.includes("רג׳ורן") ||
+    t.includes("רג'ורן") ||
+    t.includes("זרע סלמון") ||
+    t.includes("rejuran") ||
+    t.includes("реджуран")
+  ) {
+    return {
+      treatment: "רג׳ורן",
+      status: "asked_about_rejuran",
+    };
+  }
 
-if (
-  t.includes("תור") ||
-  t.includes("לקבוע") ||
-  t.includes("ייעוץ") ||
-  t.includes("פגישה") ||
-  t.includes("запис") ||
-  t.includes("записаться") ||
-  t.includes("консультац") ||
-  t.includes("встреча") ||
-  t.includes("прием") ||
-  t.includes("приём") ||
-  t.includes("стоматолог")
-) {
-  return {
-    treatment: existingLead?.treatment || "",
-    status: "wants_appointment",
-  };
-}
+  if (
+    t.includes("תור") ||
+    t.includes("לקבוע") ||
+    t.includes("ייעוץ") ||
+    t.includes("פגישה") ||
+    t.includes("запис") ||
+    t.includes("записаться") ||
+    t.includes("консультац") ||
+    t.includes("встреча") ||
+    t.includes("прием") ||
+    t.includes("приём") ||
+    t.includes("стоматолог") ||
+    t.includes("врач")
+  ) {
+    return {
+      treatment: existingLead?.treatment || "",
+      status: "wants_appointment",
+    };
+  }
 
   return {
     treatment: existingLead?.treatment || "",
@@ -356,6 +391,10 @@ const clinicKnowledge = `
 חולון
 כרמי יוסף
 
+По-русски:
+Холон
+Кармей Йосеф
+
 שיננית:
 מבוגר מעל גיל 18 – 280 ₪
 ילדים עד גיל 18 – 210 ₪
@@ -451,13 +490,22 @@ app.post("/webhook", async (req, res) => {
 
       let adminNotified = false;
 
-      const humanTakeoverSummary = `שם: ${existingLead?.name || "לא נמסר"}
+      const takeoverDetected =
+        detectTreatment(text, existingLead);
+
+      const takeoverExtractedDetails =
+        extractUserDetails(text);
+
+      const takeoverDetectedBranch =
+        detectBranch(text, existingLead);
+
+      const humanTakeoverSummary = `שם: ${takeoverExtractedDetails.name || existingLead?.name || "לא נמסר"}
 טלפון וואטסאפ: ${from}
-טיפול: ${existingLead?.treatment || "לא ידוע"}
-סניף מועדף: ${existingLead?.branch || "לא נמסר"}
-תאריך לידה: ${existingLead?.birth_date || "לא נמסר"}
-תעודת זהות: ${existingLead?.id_number || "לא נמסר"}
-סטטוס: ${existingLead?.status || "human_handling"}
+טיפול: ${takeoverDetected.treatment || existingLead?.treatment || "לא ידוע"}
+סניף מועדף: ${takeoverDetectedBranch || existingLead?.branch || "לא נמסר"}
+תאריך לידה: ${takeoverExtractedDetails.birth_date || existingLead?.birth_date || "לא נמסר"}
+תעודת זהות: ${takeoverExtractedDetails.id_number || existingLead?.id_number || "לא נמסר"}
+סטטוס: ${takeoverDetected.status || existingLead?.status || "human_handling"}
 הודעה אחרונה: ${text}`;
 
       if (shouldNotifyHumanTakeover) {
@@ -467,7 +515,12 @@ app.post("/webhook", async (req, res) => {
 
       await upsertLead({
         phone: from,
-        status: existingLead?.status || "human_handling",
+        name: takeoverExtractedDetails.name,
+        birth_date: takeoverExtractedDetails.birth_date,
+        id_number: takeoverExtractedDetails.id_number,
+        treatment: takeoverDetected.treatment,
+        branch: takeoverDetectedBranch,
+        status: takeoverDetected.status || existingLead?.status || "human_handling",
         human_takeover: "true",
         last_message: text,
         lead_summary: humanTakeoverSummary,
@@ -480,7 +533,7 @@ app.post("/webhook", async (req, res) => {
           ? getIsraelDateTime()
           : existingLead?.last_notified_at || "",
         priority: getPriority(
-          existingLead?.status || "human_handling"
+          takeoverDetected.status || existingLead?.status || "human_handling"
         ),
       });
 
@@ -538,8 +591,9 @@ app.post("/webhook", async (req, res) => {
         priority: getPriority("waiting_for_human"),
       });
 
-      const botReply =
-        "בשמחה 😊 הפנייה הועברה לצוות המרפאה ונציג יחזור אליך בהקדם.";
+      const botReply = isRussian(text)
+        ? "Конечно 😊 Я передаю обращение команде клиники, и представитель свяжется с вами в ближайшее время."
+        : "בשמחה 😊 הפנייה הועברה לצוות המרפאה ונציג יחזור אליך בהקדם.";
 
       await sendWhatsAppMessage(
         from,
@@ -594,8 +648,9 @@ app.post("/webhook", async (req, res) => {
         priority: getPriority("details_collected"),
       });
 
-      const botReply =
-        "תודה 😊 הפרטים התקבלו והועברו למזכירות המרפאה. נציג יחזור אליכם בהקדם עם אפשרויות זמינות לתיאום.";
+      const botReply = isRussian(text)
+        ? "Спасибо 😊 Данные получены и переданы администратору клиники. Представитель свяжется с вами в ближайшее время и предложит доступные варианты для записи."
+        : "תודה 😊 הפרטים התקבלו והועברו למזכירות המרפאה. נציג יחזור אליכם בהקדם עם אפשרויות זמינות לתיאום.";
 
       await sendWhatsAppMessage(
         from,
@@ -694,6 +749,9 @@ ${text}
 
 ${memoryContext}
 
+שפת המשתמש:
+${isRussian(text) ? "רוסית" : "עברית"}
+
 הוראות:
 
 אם יש טיפול שמור:
@@ -728,6 +786,8 @@ ${memoryContext}
 תגיד שנציג יחזור בהקדם.
 
 ענה באותה שפה של המשתמש.
+אם שפת המשתמש היא רוסית, ענה ברוסית טבעית וברורה.
+אם שפת המשתמש היא עברית, ענה בעברית טבעית וברורה.
 
 סגנון:
 טבעי
