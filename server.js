@@ -707,10 +707,24 @@ app.post("/webhook", async (req, res) => {
 
     const memoryContext = `
 שם: ${
-      extractedDetails.name ||
-      existingLead?.name ||
-      "לא נמסר"
-    }
+  extractedDetails.name ||
+  existingLead?.name ||
+  "לא נמסר"
+}
+
+טלפון וואטסאפ: ${from}
+
+תאריך לידה: ${
+  extractedDetails.birth_date ||
+  existingLead?.birth_date ||
+  "לא נמסר"
+}
+
+תעודת זהות: ${
+  extractedDetails.id_number ||
+  existingLead?.id_number ||
+  "לא נמסר"
+}
 
 טיפול:
 ${
@@ -726,13 +740,19 @@ ${
   "לא נמסר"
 }
 
+סטטוס:
+${
+  detected.status ||
+  existingLead?.status ||
+  "new"
+}
+
 היסטוריית שיחה:
 ${existingLead?.conversation_history || "אין"}
 
 הודעה נוכחית:
 ${text}
 `;
-
     const aiRes = await fetch(
       "https://api.openai.com/v1/responses",
       {
