@@ -35,6 +35,206 @@ function isRussian(text = "") {
   return /[а-яА-ЯёЁ]/.test(text);
 }
 
+function getLanguage(text = "") {
+  return isRussian(text) ? "רוסית" : "עברית";
+}
+
+function isUrgentRequest(text = "") {
+  const t = text.toLowerCase();
+
+  return (
+    t.includes("דחוף") ||
+    t.includes("כואב") ||
+    t.includes("כאבים") ||
+    t.includes("בעיה") ||
+    t.includes("נשבר") ||
+    t.includes("נפל") ||
+    t.includes("срочно") ||
+    t.includes("боль") ||
+    t.includes("болит") ||
+    t.includes("проблем") ||
+    t.includes("слом") ||
+    t.includes("отвал")
+  );
+}
+
+function detectPreferredTime(text = "", existingLead = null) {
+  const t = text.toLowerCase();
+
+  if (
+    t.includes("ערב") ||
+    t.includes("בערב") ||
+    t.includes("вечер") ||
+    t.includes("вечером")
+  ) {
+    return "ערב";
+  }
+
+  if (
+    t.includes("צהריים") ||
+    t.includes("בצהריים") ||
+    t.includes("צהרים") ||
+    t.includes("день") ||
+    t.includes("днем") ||
+    t.includes("днём") ||
+    t.includes("после обеда")
+  ) {
+    return "צהריים";
+  }
+
+  return existingLead?.preferred_time || "";
+}
+
+function detectCategory(text = "", existingLead = null) {
+  const t = text.toLowerCase();
+
+  if (
+    t.trim() === "1" ||
+    t.includes("תיאום תור") ||
+    t.includes("לקבוע תור") ||
+    t.includes("לקבוע") ||
+    t.includes("תור") ||
+    t.includes("запис") ||
+    t.includes("записаться") ||
+    t.includes("прием") ||
+    t.includes("приём")
+  ) {
+    return "תיאום תור";
+  }
+
+  if (
+    t.trim() === "2" ||
+    t.includes("שאלה על טיפול") ||
+    t.includes("טיפול") ||
+    t.includes("лечение") ||
+    t.includes("процедур") ||
+    t.includes("услуг")
+  ) {
+    return "שאלה על טיפול";
+  }
+
+  if (
+    t.trim() === "3" ||
+    t.includes("שאלה על מחיר") ||
+    t.includes("מחיר") ||
+    t.includes("כמה עולה") ||
+    t.includes("עלות") ||
+    t.includes("цена") ||
+    t.includes("стоимость") ||
+    t.includes("сколько стоит")
+  ) {
+    return "שאלה על מחיר";
+  }
+
+  if (
+    t.trim() === "4" ||
+    t.includes("שאלה על שעות") ||
+    t.includes("שעות") ||
+    t.includes("פתוחים") ||
+    t.includes("מתי אתם") ||
+    t.includes("часы") ||
+    t.includes("время работы") ||
+    t.includes("когда работаете")
+  ) {
+    return "שאלה על שעות";
+  }
+
+  if (
+    t.trim() === "5" ||
+    t.includes("אחר") ||
+    t.includes("משהו אחר") ||
+    t.includes("другое") ||
+    t.includes("другой вопрос")
+  ) {
+    return "אחר";
+  }
+
+  return existingLead?.category || "";
+}
+
+function shouldSendGreeting(text = "", existingLead = null) {
+  const t = text.toLowerCase().trim();
+
+  if (existingLead?.last_message) return false;
+
+  return (
+    t === "היי" ||
+    t === "הי" ||
+    t === "שלום" ||
+    t === "בוקר טוב" ||
+    t === "ערב טוב" ||
+    t === "привет" ||
+    t === "здравствуйте" ||
+    t === "добрый день" ||
+    t === "доброе утро" ||
+    t === "добрый вечер" ||
+    t === "hello" ||
+    t === "hi"
+  );
+}
+
+function getGreetingMessage(text = "") {
+  if (isRussian(text)) {
+    return `Здравствуйте! 😊 Я Ирена из клиники доктора Майка Блума — специалиста по ортодонтии, и доктора Марины Блум — эстетическая медицина лица.
+
+Сейчас я недоступна, но с радостью помогу! По какому вопросу вы обращаетесь?
+
+1️⃣ Запись на приём
+2️⃣ Вопрос по процедуре
+3️⃣ Вопрос по цене
+4️⃣ Вопрос по часам работы
+5️⃣ Другое`;
+  }
+
+  return `היי! 😊 אני אירנה מקליניקה של ד״ר מייק בלום — מומחה לאורתודונטיה, וד״ר מרינה בלום — רפואה אסתטית של הפנים.
+
+כרגע אני לא זמינה, אבל אשמח לעזור! באיזה נושא פנית?
+
+1️⃣ תיאום תור
+2️⃣ שאלה על טיפול
+3️⃣ שאלה על מחיר
+4️⃣ שאלה על שעות
+5️⃣ אחר`;
+}
+
+function getCategoryReply(category, text = "") {
+  const russian = isRussian(text);
+
+  if (category === "תיאום תור") {
+    return russian
+      ? "С радостью! Я проверю ближайшую доступность и вернусь к вам как можно скорее 😊 Вам удобнее вечером или днём?"
+      : "בשמחה! אבדוק את הזמינות הקרובה ואחזור אליך בהקדם 😊\nנוח לך בערב או בצהריים?";
+  }
+
+  if (category === "שאלה על טיפול") {
+    return russian
+      ? "На медицинские вопросы врач отвечает лично на консультации 🙏 Хотите, чтобы мы записали вас на консультацию? Вам удобнее вечером или днём?"
+      : "שאלות רפואיות עונה הרופא/ה באופן אישי בתור 🙏\nרוצה שנתאם לך ייעוץ? נוח לך בערב או בצהריים?";
+  }
+
+  if (category === "שאלה על מחיר") {
+    return russian
+      ? "Точная цена определяется после личного осмотра у врача. Консультация стоит 340 ₪ — если вы решите продолжить лечение, эта сумма вычитается из стоимости лечения 😊 Вам удобнее вечером или днём?"
+      : "המחיר המדויק נקבע לאחר בדיקה אישית עם הרופא.\nתור ייעוץ עולה 340 ש״ח — ואם תחליט/י להמשיך לטיפול, הסכום מקוזז מעלות הטיפול 😊\nנוח לך בערב או בצהריים?";
+  }
+
+  if (category === "שאלה על שעות") {
+    return russian
+      ? "Часы работы клиники:\n🗓️ Вс, Вт, Чт — 13:00–18:30\n🗓️ Ср — 10:00–18:30\n🗓️ Пн и Пт — поочерёдно\n\nХотите, чтобы мы записали вас? Вам удобнее вечером или днём? 😊"
+      : "שעות הקליניקה שלנו:\n🗓️ א׳ ג׳ ה׳ — 13:00–18:30\n🗓️ ד׳ — 10:00–18:30\n🗓️ ב׳ ו-ו׳ — לסירוגין\n\nרוצה שנתאם תור? נוח לך בערב או בצהריים? 😊";
+  }
+
+  return russian
+    ? "Спасибо! Ирена свяжется с вами в ближайшее время 🙏"
+    : "תודה! אירנה תחזור אליך בהקדם 🙏";
+}
+
+function getUrgentReply(text = "") {
+  return isRussian(text)
+    ? "Я вижу, что это срочный вопрос 🙏 Ирена свяжется с вами как можно скорее!"
+    : "אני רואה שמדובר במשהו דחוף 🙏 אירנה תחזור אליך בהקדם האפשרי!";
+}
+
 function hasPersonalDetails(text = "") {
   return (
     /05\d[-\s]?\d{7}|9725\d{8}/.test(text) ||
@@ -110,7 +310,11 @@ function getIsraelDateTime() {
   });
 }
 
-function getPriority(status) {
+function getPriority(status, urgent = false) {
+  if (urgent) {
+    return "🔴 דחוף";
+  }
+
   if (
     status === "waiting_for_human" ||
     status === "details_collected"
@@ -304,6 +508,10 @@ function buildLeadSummary({
   detected,
   detectedBranch,
   text,
+  category = "",
+  preferredTime = "",
+  urgent = false,
+  language = "",
 }) {
   const name =
     extractedDetails.name ||
@@ -335,8 +543,14 @@ function buildLeadSummary({
     existingLead?.status ||
     "new";
 
-  return `שם: ${name}
+  return `📌 פנייה חדשה מהבוט
+
+שם: ${name}
 טלפון וואטסאפ: ${from}
+שפה: ${language || "לא ידוע"}
+סוג פנייה: ${category || "לא סווג"}
+העדפת זמן: ${preferredTime || "לא נמסר"}
+דחוף: ${urgent ? "כן" : "לא"}
 טיפול: ${treatment}
 סניף מועדף: ${branch}
 תאריך לידה: ${birthDate}
@@ -356,9 +570,7 @@ async function notifyAdmin(summary) {
 
     const result = await sendWhatsAppMessage(
       ADMIN_PHONE,
-      `📌 פנייה חדשה מהבוט
-
-${summary}`
+      summary
     );
 
     console.log(
@@ -395,17 +607,27 @@ const clinicKnowledge = `
 Холон
 Кармей Йосеф
 
+שעות הקליניקה:
+א׳ ג׳ ה׳ — 13:00–18:30
+ד׳ — 10:00–18:30
+ב׳ ו-ו׳ — לסירוגין
+
 שיננית:
 מבוגר מעל גיל 18 – 280 ₪
 ילדים עד גיל 18 – 210 ₪
 חיילים בסדיר – 210 ₪
 
+ייעוץ:
+340 ₪
+אם ממשיכים לטיפול, הסכום מתקזז מעלות הטיפול
+
 ייעוץ אורתודונטי:
-250 ₪
+340 ₪
 מתקזז מעלות הטיפול אם ממשיכים
 
 ייעוץ אסתטיקה:
-ללא עלות
+340 ₪
+מתקזז מעלות הטיפול אם ממשיכים
 
 GeneO+:
 טיפול בודד – 650 ₪
@@ -420,6 +642,8 @@ GeneO+:
 נדרש לבצע שיננית לפני
 
 אסור לקבוע תורים.
+אסור לאשר יום או שעה.
+הבוט רק אוסף מידע ומעביר לאירנה / לנציג.
 `;
 
 app.get("/", (req, res) => {
@@ -454,6 +678,8 @@ app.post("/webhook", async (req, res) => {
 
     const from = message.from;
     const text = message.text?.body || "";
+    const language = getLanguage(text);
+    const urgent = isUrgentRequest(text);
 
     if (text.trim() === "#עצור") {
       await upsertLead({
@@ -461,7 +687,7 @@ app.post("/webhook", async (req, res) => {
         human_takeover: "true",
         status: "human_handling",
         last_message: text,
-        priority: getPriority("human_handling"),
+        priority: getPriority("human_handling", urgent),
       });
 
       return res.sendStatus(200);
@@ -473,7 +699,7 @@ app.post("/webhook", async (req, res) => {
         human_takeover: "false",
         status: "bot_active",
         last_message: text,
-        priority: getPriority("bot_active"),
+        priority: getPriority("bot_active", urgent),
       });
 
       return res.sendStatus(200);
@@ -481,64 +707,6 @@ app.post("/webhook", async (req, res) => {
 
     const existingLead =
       await getLeadByPhone(from);
-
-    if (
-      existingLead?.human_takeover === "true"
-    ) {
-      const shouldNotifyHumanTakeover =
-        canNotifyAgain(existingLead?.last_notified_at);
-
-      let adminNotified = false;
-
-      const takeoverDetected =
-        detectTreatment(text, existingLead);
-
-      const takeoverExtractedDetails =
-        extractUserDetails(text);
-
-      const takeoverDetectedBranch =
-        detectBranch(text, existingLead);
-
-      const humanTakeoverSummary = `שם: ${takeoverExtractedDetails.name || existingLead?.name || "לא נמסר"}
-טלפון וואטסאפ: ${from}
-טיפול: ${takeoverDetected.treatment || existingLead?.treatment || "לא ידוע"}
-סניף מועדף: ${takeoverDetectedBranch || existingLead?.branch || "לא נמסר"}
-תאריך לידה: ${takeoverExtractedDetails.birth_date || existingLead?.birth_date || "לא נמסר"}
-תעודת זהות: ${takeoverExtractedDetails.id_number || existingLead?.id_number || "לא נמסר"}
-סטטוס: ${takeoverDetected.status || existingLead?.status || "human_handling"}
-הודעה אחרונה: ${text}`;
-
-      if (shouldNotifyHumanTakeover) {
-        adminNotified =
-          await notifyAdmin(humanTakeoverSummary);
-      }
-
-      await upsertLead({
-        phone: from,
-        name: takeoverExtractedDetails.name,
-        birth_date: takeoverExtractedDetails.birth_date,
-        id_number: takeoverExtractedDetails.id_number,
-        treatment: takeoverDetected.treatment,
-        branch: takeoverDetectedBranch,
-        status: takeoverDetected.status || existingLead?.status || "human_handling",
-        human_takeover: "true",
-        last_message: text,
-        lead_summary: humanTakeoverSummary,
-        notified: shouldNotifyHumanTakeover
-          ? adminNotified
-            ? "✅ sent"
-            : "❌ failed"
-          : existingLead?.notified || "",
-        last_notified_at: adminNotified
-          ? getIsraelDateTime()
-          : existingLead?.last_notified_at || "",
-        priority: getPriority(
-          takeoverDetected.status || existingLead?.status || "human_handling"
-        ),
-      });
-
-      return res.sendStatus(200);
-    }
 
     const detected =
       detectTreatment(text, existingLead);
@@ -549,6 +717,12 @@ app.post("/webhook", async (req, res) => {
     const detectedBranch =
       detectBranch(text, existingLead);
 
+    const category =
+      detectCategory(text, existingLead);
+
+    const preferredTime =
+      detectPreferredTime(text, existingLead);
+
     const leadSummary = buildLeadSummary({
       from,
       existingLead,
@@ -556,7 +730,166 @@ app.post("/webhook", async (req, res) => {
       detected,
       detectedBranch,
       text,
+      category,
+      preferredTime,
+      urgent,
+      language,
     });
+
+    if (shouldSendGreeting(text, existingLead)) {
+      const botReply = getGreetingMessage(text);
+
+      await upsertLead({
+        phone: from,
+        name: extractedDetails.name,
+        birth_date: extractedDetails.birth_date,
+        id_number: extractedDetails.id_number,
+        treatment: detected.treatment,
+        branch: detectedBranch,
+        status: "new",
+        human_takeover: "false",
+        last_message: text,
+        lead_summary: leadSummary,
+        priority: getPriority("new", urgent),
+        last_bot_reply: botReply,
+      });
+
+      await sendWhatsAppMessage(
+        from,
+        botReply
+      );
+
+      return res.sendStatus(200);
+    }
+
+    if (urgent) {
+      const shouldNotifyUrgent =
+        canNotifyAgain(existingLead?.last_notified_at);
+
+      let adminNotified = false;
+
+      if (shouldNotifyUrgent) {
+        adminNotified =
+          await notifyAdmin(leadSummary);
+      }
+
+      const botReply = getUrgentReply(text);
+
+      await upsertLead({
+        phone: from,
+        name: extractedDetails.name,
+        birth_date: extractedDetails.birth_date,
+        id_number: extractedDetails.id_number,
+        treatment: detected.treatment,
+        branch: detectedBranch,
+        status: "waiting_for_human",
+        human_takeover: "true",
+        last_message: text,
+        lead_summary: leadSummary,
+        notified: shouldNotifyUrgent
+          ? adminNotified
+            ? "✅ sent"
+            : "❌ failed"
+          : existingLead?.notified || "",
+        last_notified_at: adminNotified
+          ? getIsraelDateTime()
+          : existingLead?.last_notified_at || "",
+        priority: getPriority("waiting_for_human", true),
+        last_bot_reply: botReply,
+      });
+
+      await sendWhatsAppMessage(
+        from,
+        botReply
+      );
+
+      return res.sendStatus(200);
+    }
+
+    if (
+      existingLead?.human_takeover === "true"
+    ) {
+      const shouldNotifyHumanTakeover =
+        canNotifyAgain(existingLead?.last_notified_at);
+
+      let adminNotified = false;
+
+      if (shouldNotifyHumanTakeover) {
+        adminNotified =
+          await notifyAdmin(leadSummary);
+      }
+
+      await upsertLead({
+        phone: from,
+        name: extractedDetails.name,
+        birth_date: extractedDetails.birth_date,
+        id_number: extractedDetails.id_number,
+        treatment: detected.treatment,
+        branch: detectedBranch,
+        status: detected.status || existingLead?.status || "human_handling",
+        human_takeover: "true",
+        last_message: text,
+        lead_summary: leadSummary,
+        notified: shouldNotifyHumanTakeover
+          ? adminNotified
+            ? "✅ sent"
+            : "❌ failed"
+          : existingLead?.notified || "",
+        last_notified_at: adminNotified
+          ? getIsraelDateTime()
+          : existingLead?.last_notified_at || "",
+        priority: getPriority(
+          detected.status || existingLead?.status || "human_handling",
+          urgent
+        ),
+      });
+
+      return res.sendStatus(200);
+    }
+
+    if (category) {
+      const shouldNotifyCategory =
+        canNotifyAgain(existingLead?.last_notified_at);
+
+      let adminNotified = false;
+
+      if (shouldNotifyCategory) {
+        adminNotified =
+          await notifyAdmin(leadSummary);
+      }
+
+      const botReply = getCategoryReply(category, text);
+
+      await upsertLead({
+        phone: from,
+        name: extractedDetails.name,
+        birth_date: extractedDetails.birth_date,
+        id_number: extractedDetails.id_number,
+        treatment: detected.treatment,
+        branch: detectedBranch,
+        status: "waiting_for_human",
+        human_takeover: "true",
+        last_message: text,
+        lead_summary: leadSummary,
+        notified: shouldNotifyCategory
+          ? adminNotified
+            ? "✅ sent"
+            : "❌ failed"
+          : existingLead?.notified || "",
+        last_notified_at: adminNotified
+          ? getIsraelDateTime()
+          : existingLead?.last_notified_at || "",
+        priority: getPriority("waiting_for_human", urgent),
+        last_bot_reply: botReply,
+      });
+
+      await sendWhatsAppMessage(
+        from,
+        botReply
+      );
+
+      return res.sendStatus(200);
+    }
 
     if (isHumanRequest(text)) {
       const shouldNotifyHumanRequest =
@@ -588,69 +921,12 @@ app.post("/webhook", async (req, res) => {
         last_notified_at: adminNotified
           ? getIsraelDateTime()
           : existingLead?.last_notified_at || "",
-        priority: getPriority("waiting_for_human"),
+        priority: getPriority("waiting_for_human", urgent),
       });
 
       const botReply = isRussian(text)
-        ? "Конечно 😊 Я передаю обращение команде клиники, и представитель свяжется с вами в ближайшее время."
-        : "בשמחה 😊 הפנייה הועברה לצוות המרפאה ונציג יחזור אליך בהקדם.";
-
-      await sendWhatsAppMessage(
-        from,
-        botReply
-      );
-
-      await upsertLead({
-        phone: from,
-        last_bot_reply: botReply,
-      });
-
-      return res.sendStatus(200);
-    }
-
-    if (
-      hasPersonalDetails(text) &&
-      existingLead?.status ===
-        "wants_appointment"
-    ) {
-      const shouldNotifyDetailsCollected =
-        canNotifyAgain(existingLead?.last_notified_at);
-
-      let adminNotified = false;
-
-      if (shouldNotifyDetailsCollected) {
-        adminNotified =
-          await notifyAdmin(leadSummary);
-      }
-
-      await upsertLead({
-        phone: from,
-        name: extractedDetails.name,
-        birth_date: extractedDetails.birth_date,
-        id_number: extractedDetails.id_number,
-        treatment:
-          detected.treatment ||
-          existingLead?.treatment ||
-          "",
-        branch: detectedBranch,
-        status: "details_collected",
-        human_takeover: "true",
-        last_message: text,
-        lead_summary: leadSummary,
-        notified: shouldNotifyDetailsCollected
-          ? adminNotified
-            ? "✅ sent"
-            : "❌ failed"
-          : existingLead?.notified || "",
-        last_notified_at: adminNotified
-          ? getIsraelDateTime()
-          : existingLead?.last_notified_at || "",
-        priority: getPriority("details_collected"),
-      });
-
-      const botReply = isRussian(text)
-        ? "Спасибо 😊 Данные получены и переданы администратору клиники. Представитель свяжется с вами в ближайшее время и предложит доступные варианты для записи."
-        : "תודה 😊 הפרטים התקבלו והועברו למזכירות המרפאה. נציג יחזור אליכם בהקדם עם אפשרויות זמינות לתיאום.";
+        ? "Конечно 😊 Я передаю обращение Ирене, и она свяжется с вами в ближайшее время."
+        : "בשמחה 😊 אני מעבירה את הפנייה לאירנה, והיא תחזור אליך בהקדם.";
 
       await sendWhatsAppMessage(
         from,
@@ -701,7 +977,8 @@ app.post("/webhook", async (req, res) => {
         ? getIsraelDateTime()
         : existingLead?.last_notified_at || "",
       priority: getPriority(
-        detected.status
+        detected.status,
+        urgent
       ),
     });
 
@@ -713,6 +990,17 @@ app.post("/webhook", async (req, res) => {
 }
 
 טלפון וואטסאפ: ${from}
+
+שפת משתמש: ${language}
+
+סוג פנייה:
+${category || "לא סווג"}
+
+העדפת זמן:
+${preferredTime || "לא נמסר"}
+
+דחוף:
+${urgent ? "כן" : "לא"}
 
 תאריך לידה: ${
   extractedDetails.birth_date ||
@@ -753,6 +1041,7 @@ ${existingLead?.conversation_history || "אין"}
 הודעה נוכחית:
 ${text}
 `;
+
     const aiRes = await fetch(
       "https://api.openai.com/v1/responses",
       {
@@ -765,7 +1054,7 @@ ${text}
         body: JSON.stringify({
           model: "gpt-4.1-mini",
           input: `
-אתה העוזר של מרפאת בלום.
+אתה אירנה מקליניקה של ד״ר מייק בלום וד״ר מרינה בלום.
 
 ${memoryContext}
 
@@ -773,6 +1062,48 @@ ${memoryContext}
 ${isRussian(text) ? "רוסית" : "עברית"}
 
 הוראות:
+
+הודעת פתיחה אם המשתמש רק אומר שלום:
+היי! 😊 אני אירנה מקליניקה של ד״ר מייק בלום — מומחה לאורתודונטיה, וד״ר מרינה בלום — רפואה אסתטית של הפנים.
+
+כרגע אני לא זמינה, אבל אשמח לעזור! באיזה נושא פנית?
+
+1️⃣ תיאום תור
+2️⃣ שאלה על טיפול
+3️⃣ שאלה על מחיר
+4️⃣ שאלה על שעות
+5️⃣ אחר
+
+אם המשתמש בוחר 1 או רוצה תיאום תור:
+תגיד שאבדוק את הזמינות הקרובה ואחזור אליו בהקדם.
+שאל אם נוח לו בערב או בצהריים.
+אל תאשר יום או שעה.
+
+אם המשתמש בוחר 2 או שואל על טיפול:
+תגיד ששאלות רפואיות הרופא/ה עונה באופן אישי בתור.
+שאל אם רוצה שנתאם ייעוץ ואם נוח בערב או בצהריים.
+
+אם המשתמש בוחר 3 או שואל מחיר:
+תגיד שהמחיר המדויק נקבע לאחר בדיקה אישית עם הרופא.
+תגיד שתור ייעוץ עולה 340 ש״ח ואם ממשיכים לטיפול הסכום מקוזז מעלות הטיפול.
+שאל אם נוח בערב או בצהריים.
+
+אם המשתמש בוחר 4 או שואל שעות:
+שעות הקליניקה:
+א׳ ג׳ ה׳ — 13:00–18:30
+ד׳ — 10:00–18:30
+ב׳ ו-ו׳ — לסירוגין
+שאל אם רוצה שנתאם תור ואם נוח בערב או בצהריים.
+
+אם המשתמש בוחר 5 או משהו אחר:
+תגיד תודה ושאירנה תחזור אליו בהקדם.
+
+אם המשתמש כותב דחוף / כואב / בעיה:
+תגיד שאתה רואה שמדובר במשהו דחוף ושאירנה תחזור בהקדם האפשרי.
+
+אסור לקבוע תורים.
+אסור לאשר יום או שעה.
+התפקיד שלך הוא לאסוף מידע ולהעביר לאירנה.
 
 אם יש טיפול שמור:
 תמשיך לפי אותו טיפול.
@@ -783,47 +1114,11 @@ ${isRussian(text) ? "רוסית" : "עברית"}
 אם המשתמש שואל על מה דיברנו:
 תענה לפי הזיכרון.
 
-לפני שאתה מבקש פרטים:
-בדוק אם הם כבר קיימים בזיכרון.
-
-אל תבקש שוב:
-- תעודת זהות אם כבר קיימת
-- תאריך לידה אם כבר קיים
-- שם אם כבר קיים
-
-אם חסר רק פרט אחד:
-בקש רק את הפרט החסר.
-
-אסור לקבוע תורים.
-אסור לאשר יום או שעה.
-
-התפקיד שלך:
-רק לאסוף פרטים ולהעביר לנציג אנושי.
-
-אם חסרים פרטים:
-בקש:
-- שם מלא
-- תאריך לידה
-- תעודת זהות
-
-אם כל הפרטים כבר קיימים
-והמשתמש רוצה לקבוע תור או לדבר עם נציג:
-תגיד שנציג יחזור אליו בהקדם.
-
-אם מדובר באורתודונטיה:
-תגיד שהייעוץ עולה 250 ₪ ומתקזז.
-
-אם מדובר באסתטיקה:
-תגיד שהייעוץ ללא עלות
-ושאל איזה סניף נוח.
-
-אם המשתמש רוצה נציג:
-תגיד שנציג יחזור בהקדם.
-
 ענה באותה שפה של המשתמש.
 
 אם שפת המשתמש היא רוסית:
 ענה ברוסית טבעית וברורה.
+העבר את אותם מסרים בדיוק ברוסית.
 
 אם שפת המשתמש היא עברית:
 ענה בעברית טבעית וברורה.
