@@ -18,7 +18,7 @@ const SPREADSHEET_ID =
   process.env.SPREADSHEET_ID || process.env.GOOGLE_SHEET_ID;
 
 const SHEET_NAME = "גיליון1";
-const RANGE = `${SHEET_NAME}!A:T`;
+const RANGE = `${SHEET_NAME}!A:Y`;
 
 function getIsraelDateTime() {
   return new Date().toLocaleString("he-IL", {
@@ -80,6 +80,11 @@ export async function getLeadByPhone(phone) {
         preferred_time: rows[i][17] || "",
         urgent: rows[i][18] || "",
         source_language: rows[i][19] || "",
+        preferred_day: rows[i][20] || "",
+        doctor_field: rows[i][21] || "",
+        appointment_day: rows[i][22] || "",
+        appointment_time: rows[i][23] || "",
+        appointment_status: rows[i][24] || "",
       };
     }
   }
@@ -116,12 +121,17 @@ USER: ${data.last_message || ""}
     data.preferred_time || existing?.preferred_time || "",
     data.urgent || existing?.urgent || "",
     data.source_language || existing?.source_language || "",
+    data.preferred_day || existing?.preferred_day || "",
+    data.doctor_field || existing?.doctor_field || "",
+    data.appointment_day || existing?.appointment_day || "",
+    data.appointment_time || existing?.appointment_time || "",
+    data.appointment_status || existing?.appointment_status || "",
   ]];
 
   if (existing) {
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A${existing.rowIndex}:T${existing.rowIndex}`,
+      range: `${SHEET_NAME}!A${existing.rowIndex}:Y${existing.rowIndex}`,
       valueInputOption: "USER_ENTERED",
       requestBody: { values },
     });
@@ -153,7 +163,7 @@ USER: ${data.last_message || ""}
 
   await sheets.spreadsheets.values.update({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAME}!A2:T2`,
+    range: `${SHEET_NAME}!A2:Y2`,
     valueInputOption: "USER_ENTERED",
     requestBody: { values },
   });
