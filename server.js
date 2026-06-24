@@ -20,6 +20,8 @@ function isHumanRequest(text = "") {
     t.includes("לדבר עם מישהו") ||
     t.includes("שיחזרו אליי") ||
     t.includes("שיחזרו אלי") ||
+    t.includes("אירנה") ||
+    t.includes("irena") ||
     t.includes("оператор") ||
     t.includes("администратор") ||
     t.includes("админ") ||
@@ -27,7 +29,8 @@ function isHumanRequest(text = "") {
     t.includes("живой человек") ||
     t.includes("связаться") ||
     t.includes("перезвон") ||
-    t.includes("позвон")
+    t.includes("позвон") ||
+    t.includes("ирена")
   );
 }
 
@@ -49,17 +52,53 @@ function isUrgentRequest(text = "") {
     t.includes("בעיה") ||
     t.includes("נשבר") ||
     t.includes("נפל") ||
+    t.includes("נפיחות") ||
+    t.includes("רגישות") ||
+    t.includes("עזרה") ||
     t.includes("срочно") ||
     t.includes("боль") ||
     t.includes("болит") ||
     t.includes("проблем") ||
     t.includes("слом") ||
-    t.includes("отвал")
+    t.includes("отвал") ||
+    t.includes("опух") ||
+    t.includes("помощ")
+  );
+}
+
+function isAppointmentQuestion(text = "") {
+  const t = text.toLowerCase();
+
+  return (
+    t.includes("מתי התור") ||
+    t.includes("מתי יש לי תור") ||
+    t.includes("לאיזה שעה") ||
+    t.includes("איזה שעה") ||
+    t.includes("באיזה יום התור") ||
+    t.includes("יש לי תור") ||
+    t.includes("תזכיר לי את התור") ||
+    t.includes("מה קבענו") ||
+    t.includes("מתי אני מגיע") ||
+    t.includes("когда моя запись") ||
+    t.includes("на когда я записан") ||
+    t.includes("во сколько") ||
+    t.includes("у меня есть запись") ||
+    t.includes("напомните запись") ||
+    t.includes("когда мне прийти")
   );
 }
 
 function detectPreferredTime(text = "", existingLead = null) {
   const t = text.toLowerCase();
+
+  if (
+    t.includes("בוקר") ||
+    t.includes("בבוקר") ||
+    t.includes("утро") ||
+    t.includes("утром")
+  ) {
+    return "בוקר";
+  }
 
   if (
     t.includes("ערב") ||
@@ -83,6 +122,133 @@ function detectPreferredTime(text = "", existingLead = null) {
   }
 
   return existingLead?.preferred_time || "";
+}
+
+function detectPreferredDay(text = "", existingLead = null) {
+  const t = text.toLowerCase();
+
+  if (
+    t.includes("ראשון") ||
+    t.includes("יום א") ||
+    t.includes("יום א׳") ||
+    t.includes("יום א'") ||
+    t.includes("воскрес")
+  ) {
+    return "יום ראשון";
+  }
+
+  if (
+    t.includes("שני") ||
+    t.includes("יום ב") ||
+    t.includes("יום ב׳") ||
+    t.includes("יום ב'") ||
+    t.includes("понедель")
+  ) {
+    return "יום שני";
+  }
+
+  if (
+    t.includes("שלישי") ||
+    t.includes("יום ג") ||
+    t.includes("יום ג׳") ||
+    t.includes("יום ג'") ||
+    t.includes("вторник")
+  ) {
+    return "יום שלישי";
+  }
+
+  if (
+    t.includes("רביעי") ||
+    t.includes("יום ד") ||
+    t.includes("יום ד׳") ||
+    t.includes("יום ד'") ||
+    t.includes("сред")
+  ) {
+    return "יום רביעי";
+  }
+
+  if (
+    t.includes("חמישי") ||
+    t.includes("יום ה") ||
+    t.includes("יום ה׳") ||
+    t.includes("יום ה'") ||
+    t.includes("четвер")
+  ) {
+    return "יום חמישי";
+  }
+
+  if (
+    t.includes("שישי") ||
+    t.includes("יום ו") ||
+    t.includes("יום ו׳") ||
+    t.includes("יום ו'") ||
+    t.includes("пятниц")
+  ) {
+    return "יום שישי";
+  }
+
+  return existingLead?.preferred_day || "";
+}
+
+function detectDoctorField(text = "", detected = {}, existingLead = null) {
+  const t = text.toLowerCase();
+  const treatment = detected?.treatment || existingLead?.treatment || "";
+
+  if (
+    treatment === "יישור שיניים" ||
+    t.includes("יישור") ||
+    t.includes("גשר") ||
+    t.includes("אורתודונט") ||
+    t.includes("אינויזליין") ||
+    t.includes("invisalign") ||
+    t.includes("брекет") ||
+    t.includes("ортодонт") ||
+    t.includes("элайнер") ||
+    t.includes("исправление прикуса") ||
+    t.includes("выравнивание зубов")
+  ) {
+    return "ד״ר מייק בלום — אורתודונטיה";
+  }
+
+  if (
+    treatment === "אסתטיקה" ||
+    treatment === "GeneO+" ||
+    treatment === "רג׳ורן" ||
+    t.includes("אסתטיקה") ||
+    t.includes("בוטוקס") ||
+    t.includes("חומצה") ||
+    t.includes("שפתיים") ||
+    t.includes("סקין בוסטר") ||
+    t.includes("geneo") ||
+    t.includes("רג׳ורן") ||
+    t.includes("rejuran") ||
+    t.includes("ботокс") ||
+    t.includes("эстет") ||
+    t.includes("губы") ||
+    t.includes("филлер") ||
+    t.includes("гиалурон") ||
+    t.includes("кислота") ||
+    t.includes("реджуран") ||
+    t.includes("дженео")
+  ) {
+    return "ד״ר מרינה בלום — רפואה אסתטית";
+  }
+
+  if (
+    t.includes("מייק") ||
+    t.includes("майк")
+  ) {
+    return "ד״ר מייק בלום — אורתודונטיה";
+  }
+
+  if (
+    t.includes("מרינה") ||
+    t.includes("марина")
+  ) {
+    return "ד״ר מרינה בלום — רפואה אסתטית";
+  }
+
+  return existingLead?.doctor_field || "";
 }
 
 function detectCategory(text = "", existingLead = null) {
@@ -197,31 +363,125 @@ function getGreetingMessage(text = "") {
 5️⃣ אחר`;
 }
 
-function getCategoryReply(category, text = "") {
+function getFieldQuestion(text = "") {
+  return isRussian(text)
+    ? `К какому направлению относится обращение?
+
+🔹 Ортодонтия / выравнивание зубов — доктор Майк Блум
+🔹 Эстетическая медицина лица — доктор Марина Блум`
+    : `לאיזה תחום הפנייה?
+
+🔹 יישור שיניים / אורתודונטיה — ד״ר מייק בלום
+🔹 רפואה אסתטית של הפנים — ד״ר מרינה בלום`;
+}
+
+function getDayQuestion(text = "") {
+  return isRussian(text)
+    ? "Какой день вам удобен?"
+    : "איזה יום נוח לך?";
+}
+
+function getTimeQuestion(text = "", doctorField = "") {
+  const russian = isRussian(text);
+
+  if (doctorField.includes("מרינה")) {
+    return russian
+      ? "Что вам удобнее: утро, день или вечер? ☀️\nВажно: утро возможно только по понедельникам и средам, в зависимости от доступности."
+      : "מה נוח לך יותר: בוקר, צהריים או ערב? ☀️\nחשוב: בוקר אפשרי רק לד״ר מרינה בימי שני ורביעי, לפי זמינות.";
+  }
+
+  return russian
+    ? "Вам удобнее днём или вечером?"
+    : "נוח לך יותר בצהריים או בערב?";
+}
+
+function getCompletionReply({
+  text = "",
+  doctorField = "",
+  preferredDay = "",
+  preferredTime = "",
+}) {
+  if (isRussian(text)) {
+    return `Отлично, я получила данные 🙏
+Ирена свяжется с вами в ближайшее время, чтобы окончательно подтвердить запись.
+
+Кратко по вашему запросу:
+• Направление: ${doctorField || "не указано"}
+• Предпочтительный день: ${preferredDay || "не указан"}
+• Предпочтительное время: ${preferredTime || "не указано"}`;
+  }
+
+  return `מעולה, קיבלתי את הפרטים 🙏
+אירנה תחזור אליך בהקדם כדי לאשר את התור באופן סופי.
+
+סיכום הבקשה שלך:
+• תחום: ${doctorField || "לא נמסר"}
+• יום מועדף: ${preferredDay || "לא נמסר"}
+• זמן מועדף: ${preferredTime || "לא נמסר"}`;
+}
+
+function getCategoryReply(category, text = "", doctorField = "") {
   const russian = isRussian(text);
 
   if (category === "תיאום תור") {
-    return russian
-      ? "С радостью! Я проверю ближайшую доступность и вернусь к вам как можно скорее 😊 Вам удобнее вечером или днём?"
-      : "בשמחה! אבדוק את הזמינות הקרובה ואחזור אליך בהקדם 😊\nנוח לך בערב או בצהריים?";
+    if (!doctorField) return getFieldQuestion(text);
+    return getDayQuestion(text);
   }
 
   if (category === "שאלה על טיפול") {
+    if (!doctorField) return getFieldQuestion(text);
+
+    if (doctorField.includes("מייק")) {
+      return russian
+        ? "На медицинские вопросы доктор Майк Блум отвечает лично во время консультации 🙏 Хотите, чтобы Ирена связалась с вами для записи на консультацию?"
+        : "שאלות רפואיות עונה ד״ר מייק בלום באופן אישי במהלך הייעוץ 🙏\nרוצה שאירנה תחזור אליך לתיאום ייעוץ?";
+    }
+
     return russian
-      ? "На медицинские вопросы врач отвечает лично на консультации 🙏 Хотите, чтобы мы записали вас на консультацию? Вам удобнее вечером или днём?"
-      : "שאלות רפואיות עונה הרופא/ה באופן אישי בתור 🙏\nרוצה שנתאם לך ייעוץ? נוח לך בערב או בצהריים?";
+      ? "На медицинские вопросы доктор Марина Блум отвечает лично во время консультации 🙏 Хотите, чтобы Ирена связалась с вами для записи на консультацию?"
+      : "שאלות רפואיות עונה ד״ר מרינה בלום באופן אישי במהלך הייעוץ 🙏\nרוצה שאירנה תחזור אליך לתיאום ייעוץ?";
   }
 
   if (category === "שאלה על מחיר") {
+    if (!doctorField) {
+      return russian
+        ? "Точная цена определяется после личного осмотра у врача. Консультация стоит 340 ₪ — если вы решите продолжить лечение, эта сумма вычитается из стоимости лечения 😊\n\nК какому направлению относится обращение?\n🔹 Ортодонтия — доктор Майк Блум\n🔹 Эстетическая медицина лица — доктор Марина Блум"
+        : "המחיר המדויק נקבע לאחר בדיקה אישית עם הרופא/ה 😊\nעלות פגישת ייעוץ היא 340 ₪, ובמידה שמתחילים טיפול, הסכום מתקזז מעלות הטיפול.\n\nלאיזה תחום התעניינת?\n🔹 יישור שיניים — ד״ר מייק בלום\n🔹 רפואה אסתטית — ד״ר מרינה בלום";
+    }
+
     return russian
-      ? "Точная цена определяется после личного осмотра у врача. Консультация стоит 340 ₪ — если вы решите продолжить лечение, эта сумма вычитается из стоимости лечения 😊 Вам удобнее вечером или днём?"
-      : "המחיר המדויק נקבע לאחר בדיקה אישית עם הרופא.\nתור ייעוץ עולה 340 ש״ח — ואם תחליט/י להמשיך לטיפול, הסכום מקוזז מעלות הטיפול 😊\nנוח לך בערב או בצהריים?";
+      ? "Точная цена определяется после личного осмотра у врача. Консультация стоит 340 ₪ — если вы решите продолжить лечение, эта сумма вычитается из стоимости лечения 😊"
+      : "המחיר המדויק נקבע לאחר בדיקה אישית עם הרופא/ה 😊\nעלות פגישת ייעוץ היא 340 ₪, ובמידה שמתחילים טיפול, הסכום מתקזז מעלות הטיפול.";
   }
 
   if (category === "שאלה על שעות") {
     return russian
-      ? "Часы работы клиники:\n🗓️ Вс, Вт, Чт — 13:00–18:30\n🗓️ Ср — 10:00–18:30\n🗓️ Пн и Пт — поочерёдно\n\nХотите, чтобы мы записали вас? Вам удобнее вечером или днём? 😊"
-      : "שעות הקליניקה שלנו:\n🗓️ א׳ ג׳ ה׳ — 13:00–18:30\n🗓️ ד׳ — 10:00–18:30\n🗓️ ב׳ ו-ו׳ — לסירוגין\n\nרוצה שנתאם תור? נוח לך בערב או בצהריים? 😊";
+      ? `Часы работы клиники:
+
+Доктор Майк Блум — ортодонтия:
+🗓️ Вс, Вт, Чт — 13:00–18:30
+🗓️ Пн и Пт — поочерёдно
+
+Доктор Марина Блум — эстетическая медицина:
+🗓️ Вс, Вт, Чт — 13:00–18:30
+🗓️ Ср — 10:00–18:30
+🗓️ Пн и Пт — поочерёдно
+☀️ Утро — только по понедельникам и средам, в зависимости от доступности
+
+Хотите, чтобы Ирена связалась с вами для записи? 😊`
+      : `שעות הקליניקה:
+
+ד״ר מייק בלום — אורתודונטיה:
+🗓️ א׳, ג׳, ה׳ — 13:00–18:30
+🗓️ ב׳ ו־ו׳ — לסירוגין
+
+ד״ר מרינה בלום — רפואה אסתטית:
+🗓️ א׳, ג׳, ה׳ — 13:00–18:30
+🗓️ ד׳ — 10:00–18:30
+🗓️ ב׳ ו־ו׳ — לסירוגין
+☀️ בוקר — רק בימי שני ורביעי, לפי זמינות
+
+רוצה שאירנה תחזור אליך לתיאום? 😊`;
   }
 
   return russian
@@ -232,7 +492,45 @@ function getCategoryReply(category, text = "") {
 function getUrgentReply(text = "") {
   return isRussian(text)
     ? "Я вижу, что это срочный вопрос 🙏 Ирена свяжется с вами как можно скорее!"
-    : "אני רואה שמדובר במשהו דחוף 🙏 אירנה תחזור אליך בהקדם האפשרי!";
+    : "אני רואה שמדובר במקרה דחוף 🙏 אירנה תחזור אליך בהקדם האפשרי!";
+}
+
+function getAppointmentReply(text = "", existingLead = null) {
+  if (existingLead?.appointment_day && existingLead?.appointment_time) {
+    return isRussian(text)
+      ? `Ваша запись назначена на ${existingLead.appointment_day} в ${existingLead.appointment_time} 😊`
+      : `התור שלך נקבע ל${existingLead.appointment_day} בשעה ${existingLead.appointment_time} 😊`;
+  }
+
+  return isRussian(text)
+    ? "Я пока не вижу окончательно подтверждённую запись в системе. Ирена свяжется с вами, чтобы подтвердить детали 🙏"
+    : "אני עדיין לא רואה תור סופי שמור במערכת. אירנה תחזור אליך כדי לאשר את הפרטים 🙏";
+}
+
+function parseAppointmentCommand(text = "") {
+  const t = text.trim();
+
+  if (!t.startsWith("#תור") && !t.toLowerCase().startsWith("#appointment")) {
+    return null;
+  }
+
+  const phoneMatch = t.match(/9725\d{8}|05\d[-\s]?\d{7}/);
+  const timeMatch = t.match(/\b([01]?\d|2[0-3]):[0-5]\d\b/);
+
+  const day =
+    detectPreferredDay(t, null) ||
+    "";
+
+  if (!timeMatch) {
+    return null;
+  }
+
+  return {
+    targetPhone: phoneMatch ? phoneMatch[0].replace(/\D/g, "") : "",
+    appointment_day: day || "",
+    appointment_time: timeMatch[0],
+    appointment_status: "נקבע",
+  };
 }
 
 function hasPersonalDetails(text = "") {
@@ -509,9 +807,11 @@ function buildLeadSummary({
   detectedBranch,
   text,
   category = "",
+  preferredDay = "",
   preferredTime = "",
   urgent = false,
   language = "",
+  doctorField = "",
 }) {
   const name =
     extractedDetails.name ||
@@ -543,13 +843,21 @@ function buildLeadSummary({
     existingLead?.status ||
     "new";
 
+  const savedAppointment =
+    existingLead?.appointment_day && existingLead?.appointment_time
+      ? `${existingLead.appointment_day} ${existingLead.appointment_time}`
+      : "אין";
+
   return `📌 פנייה חדשה מהבוט
 
 שם: ${name}
 טלפון וואטסאפ: ${from}
 שפה: ${language || "לא ידוע"}
 סוג פנייה: ${category || "לא סווג"}
+תחום / רופא: ${doctorField || "לא נמסר"}
+יום מועדף: ${preferredDay || "לא נמסר"}
 העדפת זמן: ${preferredTime || "לא נמסר"}
+תור שנקבע: ${savedAppointment}
 דחוף: ${urgent ? "כן" : "לא"}
 טיפול: ${treatment}
 סניף מועדף: ${branch}
@@ -608,9 +916,16 @@ const clinicKnowledge = `
 Кармей Йосеф
 
 שעות הקליניקה:
-א׳ ג׳ ה׳ — 13:00–18:30
+
+ד״ר מייק בלום — אורתודונטיה:
+א׳, ג׳, ה׳ — 13:00–18:30
+ב׳ ו־ו׳ — לסירוגין
+
+ד״ר מרינה בלום — רפואה אסתטית:
+א׳, ג׳, ה׳ — 13:00–18:30
 ד׳ — 10:00–18:30
-ב׳ ו-ו׳ — לסירוגין
+ב׳ ו־ו׳ — לסירוגין
+בוקר — רק בימי שני ורביעי, לפי זמינות
 
 שיננית:
 מבוגר מעל גיל 18 – 280 ₪
@@ -681,6 +996,48 @@ app.post("/webhook", async (req, res) => {
     const language = getLanguage(text);
     const urgent = isUrgentRequest(text);
 
+    const existingLead =
+      await getLeadByPhone(from);
+
+    const appointmentCommand =
+      parseAppointmentCommand(text);
+
+    if (appointmentCommand) {
+      const targetPhone =
+        appointmentCommand.targetPhone || from;
+
+      await upsertLead({
+        phone: targetPhone,
+        appointment_day: appointmentCommand.appointment_day,
+        appointment_time: appointmentCommand.appointment_time,
+        appointment_status: appointmentCommand.appointment_status,
+        status: "appointment_scheduled",
+        last_message: text,
+        priority: "🟢 נקבע תור",
+      });
+
+      console.log("Appointment saved");
+      return res.sendStatus(200);
+    }
+
+    if (isAppointmentQuestion(text)) {
+      const botReply =
+        getAppointmentReply(text, existingLead);
+
+      await upsertLead({
+        phone: from,
+        last_message: text,
+        last_bot_reply: botReply,
+      });
+
+      await sendWhatsAppMessage(
+        from,
+        botReply
+      );
+
+      return res.sendStatus(200);
+    }
+
     if (text.trim() === "#עצור") {
       await upsertLead({
         phone: from,
@@ -705,9 +1062,6 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    const existingLead =
-      await getLeadByPhone(from);
-
     const detected =
       detectTreatment(text, existingLead);
 
@@ -720,8 +1074,14 @@ app.post("/webhook", async (req, res) => {
     const category =
       detectCategory(text, existingLead);
 
+    const preferredDay =
+      detectPreferredDay(text, existingLead);
+
     const preferredTime =
       detectPreferredTime(text, existingLead);
+
+    const doctorField =
+      detectDoctorField(text, detected, existingLead);
 
     const leadSummary = buildLeadSummary({
       from,
@@ -731,9 +1091,11 @@ app.post("/webhook", async (req, res) => {
       detectedBranch,
       text,
       category,
+      preferredDay,
       preferredTime,
       urgent,
       language,
+      doctorField,
     });
 
     if (shouldSendGreeting(text, existingLead)) {
@@ -752,6 +1114,12 @@ app.post("/webhook", async (req, res) => {
         lead_summary: leadSummary,
         priority: getPriority("new", urgent),
         last_bot_reply: botReply,
+        category,
+        preferred_day: preferredDay,
+        preferred_time: preferredTime,
+        urgent: urgent ? "TRUE" : "FALSE",
+        source_language: language,
+        doctor_field: doctorField,
       });
 
       await sendWhatsAppMessage(
@@ -796,6 +1164,82 @@ app.post("/webhook", async (req, res) => {
           : existingLead?.last_notified_at || "",
         priority: getPriority("waiting_for_human", true),
         last_bot_reply: botReply,
+        category,
+        preferred_day: preferredDay,
+        preferred_time: preferredTime,
+        urgent: "TRUE",
+        source_language: language,
+        doctor_field: doctorField,
+      });
+
+      await sendWhatsAppMessage(
+        from,
+        botReply
+      );
+
+      return res.sendStatus(200);
+    }
+
+    if (
+      category === "תיאום תור" ||
+      existingLead?.status === "collecting_preferences"
+    ) {
+      let botReply = "";
+      let nextStatus = "collecting_preferences";
+      let shouldNotifyPreferences = false;
+
+      if (!doctorField) {
+        botReply = getFieldQuestion(text);
+      } else if (!preferredDay) {
+        botReply = getDayQuestion(text);
+      } else if (!preferredTime) {
+        botReply = getTimeQuestion(text, doctorField);
+      } else {
+        botReply = getCompletionReply({
+          text,
+          doctorField,
+          preferredDay,
+          preferredTime,
+        });
+
+        nextStatus = "waiting_for_human";
+        shouldNotifyPreferences = true;
+      }
+
+      let adminNotified = false;
+
+      if (shouldNotifyPreferences) {
+        adminNotified =
+          await notifyAdmin(leadSummary);
+      }
+
+      await upsertLead({
+        phone: from,
+        name: extractedDetails.name,
+        birth_date: extractedDetails.birth_date,
+        id_number: extractedDetails.id_number,
+        treatment: detected.treatment,
+        branch: detectedBranch,
+        status: nextStatus,
+        human_takeover: shouldNotifyPreferences ? "true" : "false",
+        last_message: text,
+        lead_summary: leadSummary,
+        notified: shouldNotifyPreferences
+          ? adminNotified
+            ? "✅ sent"
+            : "❌ failed"
+          : existingLead?.notified || "",
+        last_notified_at: adminNotified
+          ? getIsraelDateTime()
+          : existingLead?.last_notified_at || "",
+        priority: getPriority(nextStatus, urgent),
+        last_bot_reply: botReply,
+        category: "תיאום תור",
+        preferred_day: preferredDay,
+        preferred_time: preferredTime,
+        urgent: urgent ? "TRUE" : "FALSE",
+        source_language: language,
+        doctor_field: doctorField,
       });
 
       await sendWhatsAppMessage(
@@ -842,13 +1286,32 @@ app.post("/webhook", async (req, res) => {
           detected.status || existingLead?.status || "human_handling",
           urgent
         ),
+        category,
+        preferred_day: preferredDay,
+        preferred_time: preferredTime,
+        urgent: urgent ? "TRUE" : "FALSE",
+        source_language: language,
+        doctor_field: doctorField,
       });
 
       return res.sendStatus(200);
     }
 
     if (category) {
+      let botReply = getCategoryReply(category, text, doctorField);
+
+      const nextStatus =
+        category === "תיאום תור"
+          ? "collecting_preferences"
+          : "waiting_for_human";
+
+      const nextHumanTakeover =
+        category === "תיאום תור"
+          ? "false"
+          : "true";
+
       const shouldNotifyCategory =
+        category !== "תיאום תור" &&
         canNotifyAgain(existingLead?.last_notified_at);
 
       let adminNotified = false;
@@ -858,8 +1321,6 @@ app.post("/webhook", async (req, res) => {
           await notifyAdmin(leadSummary);
       }
 
-      const botReply = getCategoryReply(category, text);
-
       await upsertLead({
         phone: from,
         name: extractedDetails.name,
@@ -867,8 +1328,8 @@ app.post("/webhook", async (req, res) => {
         id_number: extractedDetails.id_number,
         treatment: detected.treatment,
         branch: detectedBranch,
-        status: "waiting_for_human",
-        human_takeover: "true",
+        status: nextStatus,
+        human_takeover: nextHumanTakeover,
         last_message: text,
         lead_summary: leadSummary,
         notified: shouldNotifyCategory
@@ -879,8 +1340,14 @@ app.post("/webhook", async (req, res) => {
         last_notified_at: adminNotified
           ? getIsraelDateTime()
           : existingLead?.last_notified_at || "",
-        priority: getPriority("waiting_for_human", urgent),
+        priority: getPriority(nextStatus, urgent),
         last_bot_reply: botReply,
+        category,
+        preferred_day: preferredDay,
+        preferred_time: preferredTime,
+        urgent: urgent ? "TRUE" : "FALSE",
+        source_language: language,
+        doctor_field: doctorField,
       });
 
       await sendWhatsAppMessage(
@@ -922,6 +1389,12 @@ app.post("/webhook", async (req, res) => {
           ? getIsraelDateTime()
           : existingLead?.last_notified_at || "",
         priority: getPriority("waiting_for_human", urgent),
+        category,
+        preferred_day: preferredDay,
+        preferred_time: preferredTime,
+        urgent: urgent ? "TRUE" : "FALSE",
+        source_language: language,
+        doctor_field: doctorField,
       });
 
       const botReply = isRussian(text)
@@ -980,6 +1453,12 @@ app.post("/webhook", async (req, res) => {
         detected.status,
         urgent
       ),
+      category,
+      preferred_day: preferredDay,
+      preferred_time: preferredTime,
+      urgent: urgent ? "TRUE" : "FALSE",
+      source_language: language,
+      doctor_field: doctorField,
     });
 
     const memoryContext = `
@@ -996,8 +1475,21 @@ app.post("/webhook", async (req, res) => {
 סוג פנייה:
 ${category || "לא סווג"}
 
+תחום / רופא:
+${doctorField || "לא נמסר"}
+
+יום מועדף:
+${preferredDay || "לא נמסר"}
+
 העדפת זמן:
 ${preferredTime || "לא נמסר"}
+
+תור שנקבע:
+${
+  existingLead?.appointment_day && existingLead?.appointment_time
+    ? `${existingLead.appointment_day} ${existingLead.appointment_time}`
+    : "אין"
+}
 
 דחוף:
 ${urgent ? "כן" : "לא"}
@@ -1075,31 +1567,52 @@ ${isRussian(text) ? "רוסית" : "עברית"}
 5️⃣ אחר
 
 אם המשתמש בוחר 1 או רוצה תיאום תור:
-תגיד שאבדוק את הזמינות הקרובה ואחזור אליו בהקדם.
-שאל אם נוח לו בערב או בצהריים.
+זהה קודם אם מדובר בד״ר מייק בלום — אורתודונטיה, או ד״ר מרינה בלום — רפואה אסתטית.
+אם התחום לא ברור, שאל לאיזה תחום הפנייה.
+אחרי שיש תחום, שאל איזה יום נוח לו.
+אחרי שיש יום, שאל איזה חלק ביום נוח לו.
+לד״ר מייק: להציע רק צהריים או ערב.
+לד״ר מרינה: אפשר להציע בוקר, צהריים או ערב.
+בוקר אפשרי רק לד״ר מרינה בימי שני ורביעי בלבד, לפי זמינות.
 אל תאשר יום או שעה.
 
+אחרי שיש תחום, יום מועדף וחלק ביום:
+תגיד שקיבלת את הפרטים ושאירנה תחזור אליו לאישור סופי של התור.
+תכתוב סיכום קצר של הבקשה: תחום, יום מועדף, זמן מועדף.
+
 אם המשתמש בוחר 2 או שואל על טיפול:
-תגיד ששאלות רפואיות הרופא/ה עונה באופן אישי בתור.
-שאל אם רוצה שנתאם ייעוץ ואם נוח בערב או בצהריים.
+אם זה אורתודונטיה, תגיד ששאלות רפואיות עונה ד״ר מייק בלום באופן אישי במהלך הייעוץ.
+אם זה אסתטיקה, תגיד ששאלות רפואיות עונה ד״ר מרינה בלום באופן אישי במהלך הייעוץ.
+אם התחום לא ברור, שאל לאיזה תחום הפנייה.
+שאל אם רוצה שאירנה תחזור לתיאום ייעוץ.
 
 אם המשתמש בוחר 3 או שואל מחיר:
-תגיד שהמחיר המדויק נקבע לאחר בדיקה אישית עם הרופא.
-תגיד שתור ייעוץ עולה 340 ש״ח ואם ממשיכים לטיפול הסכום מקוזז מעלות הטיפול.
-שאל אם נוח בערב או בצהריים.
+תגיד שהמחיר המדויק נקבע לאחר בדיקה אישית עם הרופא/ה.
+תגיד שתור ייעוץ עולה 340 ש״ח ואם מתחילים טיפול הסכום מתקזז מעלות הטיפול.
+שאל לאיזה תחום התעניין אם לא ברור.
 
 אם המשתמש בוחר 4 או שואל שעות:
-שעות הקליניקה:
-א׳ ג׳ ה׳ — 13:00–18:30
+ד״ר מייק בלום — אורתודונטיה:
+א׳, ג׳, ה׳ — 13:00–18:30
+ב׳ ו־ו׳ — לסירוגין
+
+ד״ר מרינה בלום — רפואה אסתטית:
+א׳, ג׳, ה׳ — 13:00–18:30
 ד׳ — 10:00–18:30
-ב׳ ו-ו׳ — לסירוגין
-שאל אם רוצה שנתאם תור ואם נוח בערב או בצהריים.
+ב׳ ו־ו׳ — לסירוגין
+בוקר — רק בימי שני ורביעי, לפי זמינות
+
+שאל אם רוצה שאירנה תחזור לתיאום.
 
 אם המשתמש בוחר 5 או משהו אחר:
 תגיד תודה ושאירנה תחזור אליו בהקדם.
 
 אם המשתמש כותב דחוף / כואב / בעיה:
-תגיד שאתה רואה שמדובר במשהו דחוף ושאירנה תחזור בהקדם האפשרי.
+תגיד שאתה רואה שמדובר במקרה דחוף ושאירנה תחזור בהקדם האפשרי.
+
+אם המשתמש שואל על התור שלו:
+אם יש תור שמור בזיכרון, אמור לו את היום והשעה.
+אם אין תור שמור, אמור שעדיין אין תור סופי שמור ושאירנה תחזור לאישור.
 
 אסור לקבוע תורים.
 אסור לאשר יום או שעה.
